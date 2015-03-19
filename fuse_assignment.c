@@ -1,6 +1,8 @@
 
-
 /*
+Author : Aditya Ambre
+Fuse based File system which supports POSIX functionalities.
+
   FUSE: Filesystem in Userspace
   Copyright (C) 2001-2007  Miklos Szeredi <miklos@szeredi.hu>
 
@@ -13,6 +15,8 @@
 #define FUSE_USE_VERSION 26
 #define FILENAME_SIZE 30
 #define FULLPATHNAME 1000 
+#define BLOCK_SIZE 8
+#define MB_CONVERT 1024*1024
 
 #include <fuse.h>
 #include <stdio.h>
@@ -30,32 +34,64 @@ running postmark program. Hence lookup code is repeated in the all the function 
 
 typedef enum {Nfile, Ndir} Ntype;
 
+
+struct block_t {   
+  long blk_num;
+  struct block_t *nxt_blk;
+};
+
+typedef struct block_t *Block;
+
+// Array maintaining free blocks
+int *free_blk=NULL;
+
 // Main inode structure 
 struct node_t {		
   Ntype type;
   char name[FILENAME_SIZE];		
   struct node_t *child;	
   struct node_t *next;
-  char *data;
+  Block data;
   int len;
 };
+
 typedef struct node_t *Node;
 
 // defining root node here 
 Node root,buffNode;
+char **memory_blocks=NULL;
 // As there is input limit for the memory defining global variables 
 
-long long malloc_counter=0,malloc_limit=0;
+long long malloc_counter=0,malloc_limit=0,block_count=0, free_block_count=0;
+
+
+int getFreeBlock()
+{
+  int i;
+
+  for(i=0;i<block_count;i++)
+  {
+    if(free_blk[i]==-1)
+    {
+      free_blk[i]=0;
+      return i;
+    }  
+  }
+
+  return -1;
+}
+
 
 // This function creates heap memory for the Node with specified size
 int ckmalloc(unsigned l,Node *t)
 {
   void *p;
+  /*
   if(malloc_limit < (malloc_counter+l))
   {
     return ENOSPC;
   }  
-
+  */
   p = malloc(l);
   if ( p == NULL ) {
     perror("malloc");
@@ -89,6 +125,16 @@ int ckmalloc(unsigned l,Node *t)
   return 0;
 }
 
+void freeBlock(Block blk)
+{
+  if(blk==NULL)
+    return;
+  freeBlock(blk->nxt_blk);
+  free_blk[blk->blk_num]=-1;
+  memset(memory_blocks[blk->blk_num],'\0',BLOCK_SIZE);
+  free(blk);
+}
+
 // freess memory
 void freemalloc(Node n)
 {
@@ -96,7 +142,7 @@ void freemalloc(Node n)
   if(n->data!=NULL)
   {
     totalsize+=n->len;
-    free (n->data);
+    freeBlock(n->data);
   }
   totalsize+=sizeof(*root);
   free(n);
@@ -233,7 +279,7 @@ static int rmfs_getattr(const char *path, struct stat *stbuf)
 		  if(temp->type==Ndir)
 		  	stbuf->st_mode = S_IFDIR | 0777;
 		  else if(temp->data !=NULL)
-			 stbuf->st_size=strlen(temp->data);
+			 stbuf->st_size=temp->len;
 		  stbuf->st_nlink = 1;
 		}
 	 else 
@@ -363,13 +409,39 @@ static int rmfs_read(const char *path, char *buf, size_t size, off_t offset,
   if(dirNode->data==NULL)
     	return 0;
 
-	len = strlen(dirNode->data);
+	len = dirNode->len;
 
-	if (offset < len) {
+	if (offset < len) {  
 		if (offset + size > len)
 			size = len - offset;
-	//	memcpy(buf, rmfs_str + offset, size);
-		memcpy(buf, dirNode->data + offset, size);
+
+    Block offset_blk=dirNode->data;
+    //Block prev_blk=dirNode->data;
+    int offset_loop=1;
+    while(offset > (BLOCK_SIZE * offset_loop))
+    {
+     // prev_blk=offset_blk;
+      offset_blk=offset_blk->nxt_blk;
+      offset_loop++;
+    }
+  	//	memcpy(buf, rmfs_str + offset, size);
+    int buff_size=size,tmp_offset=offset;
+    int charcpy=0;
+
+    while(charcpy < size)
+    {  
+
+      int dmove= (tmp_offset+buff_size)>(BLOCK_SIZE*offset_loop)?(BLOCK_SIZE*offset_loop - tmp_offset): buff_size;
+      int recal_offset= tmp_offset - (BLOCK_SIZE*(offset_loop - 1));
+      memcpy((buf+ charcpy),memory_blocks[offset_blk->blk_num] + recal_offset,dmove);
+      charcpy+=dmove;
+      buff_size-=dmove;
+      tmp_offset=BLOCK_SIZE*offset_loop;
+      offset_loop++;
+     // prev_blk=offset_blk;
+      offset_blk=offset_blk->nxt_blk;
+	  }	
+
 	} else
 		size = 0;
 
@@ -428,21 +500,25 @@ static int rmfs_mkdir(const char *path, mode_t mode)
   } 
   strncpy(a,lastslsh,strlen(lastslsh));
 
+  /*
   if(malloc_limit < (malloc_counter+sizeof(*root)))
   {
     return -ENOSPC;
   }
+  */
 
   newDirNode = malloc(sizeof(*root));
   if ( newDirNode == NULL ) {
     perror("malloc");
     return errno;
   }
-  malloc_counter+=sizeof(*root);
+  //malloc_counter+=sizeof(*root);
 
   memset(newDirNode,'\0',sizeof(*root));
 
   newDirNode->type=Ndir;
+  //newDirNode->data->blk_num=-1;
+  newDirNode->data=NULL;
   strncpy(newDirNode->name,a,sizeof(a));
 
   memset(spiltstr,'\0',100);
@@ -525,6 +601,8 @@ static int rmfs_mknod(const char *path, mode_t mode, dev_t rdev)
   memset(newDirNode,'\0',sizeof(*root));
 
   newDirNode->type=Nfile;
+  //newDirNode->data->blk_num=-1;
+  newDirNode->data=NULL;
   strncpy(newDirNode->name,a,sizeof(a));
 
   memset(spiltstr,'\0',100);
@@ -609,10 +687,12 @@ static int rmfs_create(const char *path, mode_t t,struct fuse_file_info *fi)
   } 
   strncpy(a,lastslsh,strlen(lastslsh));
 
- if(malloc_limit < (malloc_counter+sizeof(*root)))
+  /*
+  if(malloc_limit < (malloc_counter+sizeof(*root)))
   {
     return -ENOSPC;
   }
+  */
 
   newDirNode = malloc(sizeof(*root));
   if ( newDirNode == NULL ) {
@@ -623,6 +703,8 @@ static int rmfs_create(const char *path, mode_t t,struct fuse_file_info *fi)
   memset(newDirNode,'\0',sizeof(*root));
 
   newDirNode->type=Nfile;
+  //newDirNode->data->blk_num=-1;
+  newDirNode->data=NULL;
   strncpy(newDirNode->name,a,sizeof(a));
 
   memset(spiltstr,'\0',100);
@@ -773,6 +855,7 @@ static int rmfs_access(const char *path, int mask)
 	return 0;
 }
 
+
 //truncate file
 static int rmfs_truncate(const char *path, off_t size)
 {
@@ -810,7 +893,7 @@ static int rmfs_truncate(const char *path, off_t size)
     	return 0;
 
     malloc_counter-=dirNode->len;
-    free(dirNode->data);
+    freeBlock(dirNode->data);
     dirNode->data=NULL;
     //memset(dirNode->data,'\0',strlen(dirNode->data));
 	return 0;
@@ -841,9 +924,8 @@ static int rmfs_utimens(const char* path, const struct timespec ts[2])
 static int rmfs_write(const char *path, const char *buf, size_t size,
 off_t offset, struct fuse_file_info *fi)
 {
-	int len=0;
-	int newSize=0;
-   Node dirNode=root;
+	
+  Node dirNode=root;
 
   char lpath[100];
   memset(lpath,'\0',100);
@@ -877,6 +959,99 @@ off_t offset, struct fuse_file_info *fi)
   else if(buf==NULL)
     	return 0;
 
+  int buff_size=size,tmp_offset=offset;
+  Block prev_blk=NULL;
+
+  printf(" Before the actual writing \n" );
+  int fblk,charcpy=0;
+  if(dirNode->data==NULL)
+  {
+    printf(" Inside the data -> NULL and data is <%s>\n",buf );
+    dirNode->data=prev_blk=malloc(sizeof(struct block_t));
+    if(dirNode->data == NULL)
+    {
+      perror("malloc");
+      return errno;
+    }
+
+    fblk=getFreeBlock();
+    dirNode->data->blk_num=fblk;
+    dirNode->data->nxt_blk=NULL;
+    printf("Wriitn in the block <%d>\n",fblk );
+
+    while(charcpy < size)
+    {  
+      int dchar=(buff_size > BLOCK_SIZE?BLOCK_SIZE:buff_size);
+      printf("Before writing in the block tmp_offset <%d> dchar <%d>\n",tmp_offset,dchar );
+
+      strncpy((memory_blocks[fblk] + tmp_offset),(buf+ charcpy),dchar);
+      charcpy+=dchar;
+      buff_size-=BLOCK_SIZE;
+      tmp_offset=0;
+      
+      if(charcpy < size)
+      {
+        printf("Shouldn't be here\n");
+        fblk=getFreeBlock();
+        prev_blk->nxt_blk=malloc(sizeof(struct block_t));
+        prev_blk->nxt_blk->blk_num=fblk;
+        prev_blk->nxt_blk->nxt_blk=NULL;
+        if(prev_blk->nxt_blk == NULL)
+        {
+          perror("malloc");
+          return errno;
+        }
+        prev_blk=prev_blk->nxt_blk;
+      } 
+      
+    }
+    printf("Aftet the exist data <%s>\n",memory_blocks[dirNode->data->blk_num]);
+  } 
+  else
+  {
+
+    printf("Inside the appended section offset <%d> size <%d> block number <%d>\n",offset,size ,dirNode->data->blk_num);
+    Block offset_blk=dirNode->data;
+    int offset_loop=1;
+    while(offset > (BLOCK_SIZE * offset_loop))
+    {
+      prev_blk=offset_blk;
+      offset_blk=offset_blk->nxt_blk;
+      printf("Next block is : <%d>\n", offset_blk->blk_num);
+      offset_loop++;
+    }
+
+    while(charcpy < size)
+    {  
+      if(offset_blk==NULL)
+      {
+        fblk=getFreeBlock();
+        printf("Shouldn be here <%d>\n",fblk );
+        offset_blk=prev_blk->nxt_blk=malloc(sizeof(struct block_t));
+        if(offset_blk == NULL)
+        {
+          perror("malloc");
+          return errno;
+        }
+        prev_blk->nxt_blk->blk_num=fblk;
+        prev_blk->nxt_blk->nxt_blk=NULL;
+      }
+      int dmove= (tmp_offset+buff_size)>(BLOCK_SIZE*offset_loop)?(BLOCK_SIZE*offset_loop - tmp_offset): buff_size;
+      int recal_offset= tmp_offset - (BLOCK_SIZE*(offset_loop - 1));
+
+      printf("Will bewriting data as dmove <%d> recal_offset <%d> charcpy <%d>\n",dmove,recal_offset,charcpy);
+
+      strncpy(memory_blocks[offset_blk->blk_num] + recal_offset,(buf+ charcpy),dmove);
+      charcpy+=dmove;
+      buff_size-=dmove;
+      tmp_offset=BLOCK_SIZE*offset_loop;
+      offset_loop++;
+      prev_blk=offset_blk;
+      offset_blk=offset_blk->nxt_blk;
+    }
+  }
+
+  /*
   if(dirNode->data!=NULL)
     	len=dirNode->len;
   int mlc_chk=0;
@@ -906,6 +1081,9 @@ off_t offset, struct fuse_file_info *fi)
 	//printf("dir data :%s\n",dirNode->data);
 	strncpy(dirNode->data + offset,buf, size);
 	//printf(">>>> after dir data :%s\n",dirNode->data);
+
+  */
+  dirNode->len=(size+offset) > dirNode->len? (size+offset):dirNode->len;
 	return size;
 }
 
@@ -948,6 +1126,7 @@ static struct fuse_operations rmfs_oper = {
 };
 
 // For testing purpose .. creates list of files and directories
+/*
 int  makeSamplefile()
 {
     int mlc_chk=0;
@@ -1106,45 +1285,88 @@ void usePersistentFile(FILE **fp)
   }
 }
 
+*/
 // Main function takes arguments as mentioned ..
 // Mount point -  where FS should be mounted 
 // Size :  size of fs as whole
 // Restore path :  extra handling to make file system persistent and to restored from with specified directory
 int main(int argc, char *argv[])
 {
-  int eflag=0,pstr=0;
+  int eflag=0,pstr=0,i;
   FILE * fp;
   if(argc < 3 || argc >4)
   {
-    printf("Usage : ./ramdisk <mount_point> <size> <Restore Filepath> \n");
+    printf("Usage : ./ramdisk <mount_point> <size in MB> <Restore Filepath> \n");
     exit(-1);
   }
 
   malloc_limit=atoi(argv[2]);
-  malloc_limit=malloc_limit*1024*1024; 
+  printf("Malloc limit <%d>\n",malloc_limit);
+  // Setting up block allocation for the in-memory file system
+  free_block_count=block_count=(malloc_limit*MB_CONVERT)/BLOCK_SIZE; 
+  memory_blocks = malloc(block_count * sizeof(char*));
+  if ( memory_blocks == NULL ) {
+      perror("malloc");
+      return errno;
+  }
+   printf("after block count malloc  \n");
+  for(i=0;i<block_count; i++)
+  {
+    memory_blocks[i]=malloc(BLOCK_SIZE * sizeof(char));
+
+    if ( memory_blocks[i] == NULL ) {
+      perror("malloc");
+      return errno;
+    }
+    memset(memory_blocks[i],'\0',BLOCK_SIZE);
+  }
+
+  printf("before free block count malloc bloc count <%d> \n",block_count);
+  // Initialize the free block structure
+  free_blk=malloc(block_count * sizeof(int));
+  if ( free_blk == NULL ) {
+      perror("malloc");
+      return errno;
+  }
+
+  for(i=0;i<block_count; i++)
+  {
+    free_blk[i]=-1;
+  }  
+
   argv[2]="-d";
 
   if(argc == 4)
     pstr=1;
-  argc=2;
+  argc=3;
   //defining the root element
+
+  printf("D1\n");
+
   int mlc_chk=ckmalloc(sizeof(*root),&root);
   if(mlc_chk!=0)
       return mlc_chk;
+
+  printf("D2\n");
   strncpy(root->name,"/",strlen("/"));
   root->type=Ndir;
   root->next=root->child=NULL;
+  root->data=NULL;
 
+  printf("D3\n");  
   if(pstr == 1)
   {    
+   printf("D4\n"); 
     fp = fopen (argv[3], "a+");
     if (fp == NULL)
       exit(EXIT_FAILURE);
     // call to restore the path
-    usePersistentFile(&fp);
+   // usePersistentFile(&fp);
     fclose(fp);
   }
   //  eflag=makeSamplefile();
+
+  printf("before the fuse main \n");
    eflag=fuse_main(argc, argv, &rmfs_oper, NULL);
 
   if(pstr == 1)
@@ -1154,8 +1376,8 @@ int main(int argc, char *argv[])
     if (fp == NULL)
        exit(EXIT_FAILURE);
 
-// Make FS persistent
-    writeToFile(&fp,prefix,root->child);
+    // Make FS persistent
+  //  writeToFile(&fp,prefix,root->child);
    
     fclose(fp);
   }
