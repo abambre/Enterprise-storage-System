@@ -6,4 +6,3 @@ dropbox:
 
 clean:
 	rm -f coldDataMove
-	rm -f fuse_assignment
