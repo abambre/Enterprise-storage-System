@@ -15,7 +15,7 @@ Fuse based File system which supports POSIX functionalities.
 #define FUSE_USE_VERSION 26
 #define FILENAME_SIZE 30
 #define FULLPATHNAME 1000 
-#define BLOCK_SIZE 8
+#define BLOCK_SIZE 4096
 #define MB_CONVERT 1024*1024
 
 #include <fuse.h>
@@ -64,6 +64,10 @@ char **memory_blocks=NULL;
 
 long long malloc_counter=0,malloc_limit=0,block_count=0, free_block_count=0;
 
+int checkStorageThreshold()
+{
+  return (int)((free_block_count/block_count)*100) > 60 ? 1:0;
+}
 
 int getFreeBlock()
 {
@@ -74,6 +78,7 @@ int getFreeBlock()
     if(free_blk[i]==-1)
     {
       free_blk[i]=0;
+      free_block_count++;
       return i;
     }  
   }
@@ -99,7 +104,7 @@ int ckmalloc(unsigned l,Node *t)
   }
   memset(p,'\0',l);
   *t=p;
-  malloc_counter+=l;
+  //malloc_counter+=l;
 
   return 0;
 }
@@ -121,7 +126,7 @@ int ckmalloc(unsigned l,Node *t)
   }
   memset(p,'\0',l);
   *t=p;
-  malloc_counter+=l;
+  //malloc_counter+=l;
   return 0;
 }
 
@@ -133,6 +138,7 @@ void freeBlock(Block blk)
   free_blk[blk->blk_num]=-1;
   memset(memory_blocks[blk->blk_num],'\0',BLOCK_SIZE);
   free(blk);
+  free_block_count--;
 }
 
 // freess memory
@@ -146,7 +152,7 @@ void freemalloc(Node n)
   }
   totalsize+=sizeof(*root);
   free(n);
-  malloc_counter-=totalsize;
+  //malloc_counter-=totalsize;
 }
 
 //  Lookup function to serach for the particular node by traversing the path from root
@@ -597,7 +603,7 @@ static int rmfs_mknod(const char *path, mode_t mode, dev_t rdev)
     perror("malloc");
     return errno;
   }
-  malloc_counter+=sizeof(*root);
+//malloc_counter+=sizeof(*root);
   memset(newDirNode,'\0',sizeof(*root));
 
   newDirNode->type=Nfile;
@@ -699,7 +705,7 @@ static int rmfs_create(const char *path, mode_t t,struct fuse_file_info *fi)
     perror("malloc");
     return errno;
   }
-  malloc_counter+=sizeof(*root);
+  //malloc_counter+=sizeof(*root);
   memset(newDirNode,'\0',sizeof(*root));
 
   newDirNode->type=Nfile;
@@ -892,7 +898,7 @@ static int rmfs_truncate(const char *path, off_t size)
   if(dirNode->data==NULL)
     	return 0;
 
-    malloc_counter-=dirNode->len;
+//malloc_counter-=dirNode->len;
     freeBlock(dirNode->data);
     dirNode->data=NULL;
     //memset(dirNode->data,'\0',strlen(dirNode->data));
@@ -962,11 +968,11 @@ off_t offset, struct fuse_file_info *fi)
   int buff_size=size,tmp_offset=offset;
   Block prev_blk=NULL;
 
-  printf(" Before the actual writing \n" );
+  // printf(" Before the actual writing \n" );
   int fblk,charcpy=0;
   if(dirNode->data==NULL)
   {
-    printf(" Inside the data -> NULL and data is <%s>\n",buf );
+    //printf(" Inside the data -> NULL and data is <%s>\n",buf );
     dirNode->data=prev_blk=malloc(sizeof(struct block_t));
     if(dirNode->data == NULL)
     {
@@ -977,12 +983,12 @@ off_t offset, struct fuse_file_info *fi)
     fblk=getFreeBlock();
     dirNode->data->blk_num=fblk;
     dirNode->data->nxt_blk=NULL;
-    printf("Wriitn in the block <%d>\n",fblk );
+   // printf("Wriitn in the block <%d>\n",fblk );
 
     while(charcpy < size)
     {  
       int dchar=(buff_size > BLOCK_SIZE?BLOCK_SIZE:buff_size);
-      printf("Before writing in the block tmp_offset <%d> dchar <%d>\n",tmp_offset,dchar );
+      //printf("Before writing in the block tmp_offset <%d> dchar <%d>\n",tmp_offset,dchar );
 
       strncpy((memory_blocks[fblk] + tmp_offset),(buf+ charcpy),dchar);
       charcpy+=dchar;
@@ -991,7 +997,7 @@ off_t offset, struct fuse_file_info *fi)
       
       if(charcpy < size)
       {
-        printf("Shouldn't be here\n");
+        //printf("Shouldn't be here\n");
         fblk=getFreeBlock();
         prev_blk->nxt_blk=malloc(sizeof(struct block_t));
         prev_blk->nxt_blk->blk_num=fblk;
@@ -1005,19 +1011,19 @@ off_t offset, struct fuse_file_info *fi)
       } 
       
     }
-    printf("Aftet the exist data <%s>\n",memory_blocks[dirNode->data->blk_num]);
+    //printf("Aftet the exist data <%s>\n",memory_blocks[dirNode->data->blk_num]);
   } 
   else
   {
 
-    printf("Inside the appended section offset <%d> size <%d> block number <%d>\n",offset,size ,dirNode->data->blk_num);
+    //printf("Inside the appended section offset <%d> size <%d> block number <%d>\n",offset,size ,dirNode->data->blk_num);
     Block offset_blk=dirNode->data;
     int offset_loop=1;
     while(offset > (BLOCK_SIZE * offset_loop))
     {
       prev_blk=offset_blk;
       offset_blk=offset_blk->nxt_blk;
-      printf("Next block is : <%d>\n", offset_blk->blk_num);
+      //printf("Next block is : <%d>\n", offset_blk->blk_num);
       offset_loop++;
     }
 
@@ -1026,7 +1032,7 @@ off_t offset, struct fuse_file_info *fi)
       if(offset_blk==NULL)
       {
         fblk=getFreeBlock();
-        printf("Shouldn be here <%d>\n",fblk );
+        //printf("Shouldn be here <%d>\n",fblk );
         offset_blk=prev_blk->nxt_blk=malloc(sizeof(struct block_t));
         if(offset_blk == NULL)
         {
@@ -1039,7 +1045,7 @@ off_t offset, struct fuse_file_info *fi)
       int dmove= (tmp_offset+buff_size)>(BLOCK_SIZE*offset_loop)?(BLOCK_SIZE*offset_loop - tmp_offset): buff_size;
       int recal_offset= tmp_offset - (BLOCK_SIZE*(offset_loop - 1));
 
-      printf("Will bewriting data as dmove <%d> recal_offset <%d> charcpy <%d>\n",dmove,recal_offset,charcpy);
+      //printf("Will bewriting data as dmove <%d> recal_offset <%d> charcpy <%d>\n",dmove,recal_offset,charcpy);
 
       strncpy(memory_blocks[offset_blk->blk_num] + recal_offset,(buf+ charcpy),dmove);
       charcpy+=dmove;
@@ -1334,11 +1340,12 @@ int main(int argc, char *argv[])
     free_blk[i]=-1;
   }  
 
-  argv[2]="-d";
+  // argv[2]="-d";
 
   if(argc == 4)
     pstr=1;
-  argc=3;
+  //argc=3;
+  argc=2;
   //defining the root element
 
   printf("D1\n");
