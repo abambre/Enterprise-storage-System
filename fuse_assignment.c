@@ -25,6 +25,8 @@ Fuse based File system which supports POSIX functionalities.
 #include <fcntl.h>
 #include <stdlib.h>
 #include "fuse_common.h"
+#include <time.h>
+#include <pthread.h>
 
 /*
 Initially all the function were to make sure reusability is maintain, but method switching cost is verfied after
@@ -53,6 +55,7 @@ struct node_t {
   struct node_t *next;
   Block data;
   int len;
+  time_t access_time;
 };
 
 typedef struct node_t *Node;
@@ -85,7 +88,143 @@ int getFreeBlock()
 
   return -1;
 }
+/*Singly linked list of all files - For cold file track*/
+typedef struct List_item {
+	Node inode; 	
+	struct List_item *next;
+}List_item ;
 
+//List_item *head = NULL;
+
+void insert_back(Node inode, List_item **head) {
+	if ((head == NULL) || (inode == NULL)) return;
+	List_item *new_node = NULL;
+	List_item *curr = NULL;
+
+	new_node = (List_item *)malloc(sizeof(List_item));
+  if(NULL == new_node) {
+    printf("Malloc Error\n");
+    return;
+ 	}
+	new_node->inode = inode;
+	new_node->next = NULL;
+
+	//List empty
+	if (NULL == *head) {
+		*head = new_node;
+		return;
+	}	
+	
+	//Insert back
+	curr = *head;
+	while(curr->next != NULL) {
+		curr = curr->next;
+	}
+	curr->next = new_node;
+	return;
+}
+
+/* Remove from front of List - Least accessed File/Cold File */
+Node get_inode(List_item **head) {
+	if(head == NULL) return NULL;
+	Node ret;
+	List_item *temp = *head;
+	if(*head == NULL) return NULL;
+	*head = (*head)->next;
+	ret = temp->inode;
+	free(temp);
+	return ret;
+}
+
+/*Sort the list according to access_time*/
+List_item *sort_list(List_item *lroot) {
+	double seconds;
+	List_item *curr = NULL, *least = NULL, *least_prev = NULL, *prev = NULL;
+	List_item *tmp = NULL;
+	
+	if ( (lroot == NULL) || (lroot->next == NULL) ) 
+		return lroot;
+		
+	curr = least = least_prev = prev = lroot;
+	while(curr != NULL) {
+		seconds = difftime(least->inode->access_time,curr->inode->access_time);
+  	if (seconds > 0) {  // printf("Date1 > Date2\n");
+  		                  //if (curr->inode->access_time < least->inode->access_time) {
+			least_prev = prev;
+			least = curr;
+		}
+		prev = curr;
+		curr = curr->next;		
+	}	
+	
+	if(least != lroot) {
+		least_prev->next = lroot;
+		tmp = lroot->next;
+		lroot->next = least->next;
+		least->next = tmp;	
+	}
+
+	least->next = sort_list(least->next);
+	return least;
+}
+
+void print_list(List_item **acclist_head) {
+	List_item *temp = NULL;
+	if (acclist_head == NULL) {
+		printf("List head empty\n");
+		return;
+	}
+	if (*acclist_head == NULL) {
+		printf("List is empty\n");
+		return;
+	}
+	temp = *acclist_head;
+	printf("Printing File access list\n");
+	while(temp != NULL) {
+		printf("%s:%ld->",temp->inode->name, temp->inode->access_time);
+		temp = temp->next;
+	}
+}
+
+void populate_list (List_item **acclist_head) {
+	Node temp = root;
+	List_item *fs_head = NULL;
+	
+	if ((root->child == NULL) && (root->next == NULL)) return;
+	insert_back(root, &fs_head);
+	
+	while(fs_head != NULL) {
+		temp = get_inode(&fs_head);
+		temp = temp->child;
+		while (temp != NULL) {
+			if(temp->type == Ndir) {
+				insert_back(temp, &fs_head);
+			}
+			else if(temp->type == Nfile) {
+				insert_back(temp, acclist_head);
+			}
+			temp = temp->next;
+		}
+	}	
+}
+
+/*-----------Track cold Files---------*/
+
+void *track_cold_files() {
+	printf("One Thread getting called\n");
+	sleep(120);
+	List_item *acclist_head = NULL;
+	printf("Thread getting called\n");
+	
+	populate_list(&acclist_head);
+	print_list(&acclist_head);	
+	printf("\nDone printing\n");
+	acclist_head = sort_list(acclist_head);
+	printf("\nSorting done\n");
+	print_list(&acclist_head);	
+	printf("\nSecond Printing  done\n");
+	pthread_exit(NULL);
+}
 
 // This function creates heap memory for the Node with specified size
 int ckmalloc(unsigned l,Node *t)
@@ -416,7 +555,8 @@ static int rmfs_read(const char *path, char *buf, size_t size, off_t offset,
     	return 0;
 
 	len = dirNode->len;
-
+	dirNode->access_time = time(NULL);
+	
 	if (offset < len) {  
 		if (offset + size > len)
 			size = len - offset;
@@ -524,6 +664,8 @@ static int rmfs_mkdir(const char *path, mode_t mode)
 
   newDirNode->type=Ndir;
   //newDirNode->data->blk_num=-1;
+  newDirNode->access_time = time(NULL);
+
   newDirNode->data=NULL;
   strncpy(newDirNode->name,a,sizeof(a));
 
@@ -711,6 +853,8 @@ static int rmfs_create(const char *path, mode_t t,struct fuse_file_info *fi)
   newDirNode->type=Nfile;
   //newDirNode->data->blk_num=-1;
   newDirNode->data=NULL;
+  newDirNode->access_time = time(NULL);
+
   strncpy(newDirNode->name,a,sizeof(a));
 
   memset(spiltstr,'\0',100);
@@ -900,7 +1044,8 @@ static int rmfs_truncate(const char *path, off_t size)
 
 //malloc_counter-=dirNode->len;
     freeBlock(dirNode->data);
-    dirNode->data=NULL;
+    dirNode->access_time = time(NULL);
+	dirNode->data=NULL;
     //memset(dirNode->data,'\0',strlen(dirNode->data));
 	return 0;
 }
@@ -1090,7 +1235,9 @@ off_t offset, struct fuse_file_info *fi)
 
   */
   dirNode->len=(size+offset) > dirNode->len? (size+offset):dirNode->len;
-	return size;
+  dirNode->access_time = time(NULL);
+
+  return size;
 }
 
 
@@ -1106,6 +1253,7 @@ static int rmfs_rename(const char *path,const char *path1)
   if(errChk!=0) { 
       return -ENOENT; }
   strncpy(dirNode->name,b,sizeof(b));
+  dirNode->access_time = time(NULL);
   return 0;
 }
 
@@ -1300,6 +1448,10 @@ int main(int argc, char *argv[])
 {
   int eflag=0,pstr=0,i;
   FILE * fp;
+  pthread_t thread1, thread2;
+  int ret1, ret2;
+  
+
   if(argc < 3 || argc >4)
   {
     printf("Usage : ./ramdisk <mount_point> <size in MB> <Restore Filepath> \n");
@@ -1374,7 +1526,14 @@ int main(int argc, char *argv[])
   //  eflag=makeSamplefile();
 
   printf("before the fuse main \n");
-   eflag=fuse_main(argc, argv, &rmfs_oper, NULL);
+  /*multithread to keep track of cold files*/
+	ret1 = pthread_create ( &thread1, NULL, track_cold_files, NULL);
+	if(ret1) {
+		printf(stderr, "Pthread create failed\n");
+		exit(1);
+   }	
+
+  eflag=fuse_main(argc, argv, &rmfs_oper, NULL);
 
   if(pstr == 1)
   {
@@ -1388,7 +1547,8 @@ int main(int argc, char *argv[])
    
     fclose(fp);
   }
-
+  
+  pthread_join(thread1, NULL);
   return eflag;
 }
 
