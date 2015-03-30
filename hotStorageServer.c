@@ -14,33 +14,23 @@
 #define PACKET_LENGTH 512
 #define LEN 64
 
-struct sockaddr_in sinaddr, incoming;
-int soc;
 int coldServer;
-int *playerServerSocs;
+struct hostent *hp;
+int connectSoc,port;
+char buf[512];
 
-
-main (int argc, char *argv[])
+void connectToColdServer(char *hostname,int port)
 {
-  int connectSoc, rc,port;
   char host[LEN];
-  struct hostent *hp;
   struct sockaddr_in sin;
-  int block_number;
-  char buf[512];
-  /* read host and port number from command line */
-  if ( argc != 3 ) {
-    fprintf(stderr, "Usage: %s <host-name> <port-number>\n", argv[0]);
-    exit(1);
-  }
-  
+  int rc;
+
   /* fill in hostent struct */
-  hp = gethostbyname(argv[1]); 
+  hp = gethostbyname(hostname); 
   if ( hp == NULL ) {
-    fprintf(stderr, "%s: host not found (%s)\n", argv[0], host);
+    fprintf(stderr, "%s: host not found (%s)\n", "connectToColdServer", hostname);
     exit(1);
   }
-  port = atoi(argv[2]);
 
   /* use address family INET and STREAMing sockets (TCP) */
   connectSoc = socket(AF_INET, SOCK_STREAM, 0);
@@ -64,58 +54,86 @@ main (int argc, char *argv[])
   buf[len1] = '\0';
   printf("Connected as player and ack<%s> \n",buf);
 
+}
+
+void sendDataBlock(int block_number)
+{
+  int len1;
+  char playerStr[10];
+  char block_buff[]="SEnding you first block";
+  sprintf(playerStr,"S:%d:%d",block_number,strlen(block_buff));
+  
+  len1 = send(connectSoc,playerStr, strlen(playerStr), 0);
+  if(len1 < 0)
+  { perror("send:"); exit(len1);}
+
+  // Receive ack for the request send
+  len1 = recv(connectSoc, buf, 32, 0);
+  buf[len1] = '\0';
+  printf("Connected as player and buf<%s> \n",buf);
+
+  // Send the block to hot server
+  
+  len1 = send(connectSoc,block_buff, strlen(block_buff), 0);
+  if(len1 < 0)
+  { perror("send:"); exit(len1);}
+
+}
+
+void fetchDataBlock(int block_number)
+{
+  int len1;
+  char playerStr[10];
+
+  sprintf(playerStr,"F:%d",block_number);
+
+  len1 = send(connectSoc,playerStr, strlen(playerStr), 0);
+  if(len1 < 0)
+  { perror("send:"); exit(len1);}
+
+  // Receive ack for the request send
+  memset(buf,'\0',sizeof(buf));
+  len1 = recv(connectSoc, buf, 32, 0);
+  buf[len1] = '\0';
+  printf("Connected as player and buf<%s> \n",buf);
+
+  char *block_fetch=(char *)malloc(sizeof(char)*atoi(buf));
+
+  len1 = send(connectSoc,"ACK", strlen("ACK"), 0);
+  if ( len1 < 0 ) 
+  {
+    perror("Fetch Block : Send ACK"); exit(1); 
+  }
+
+  len1 = recv(connectSoc, block_fetch, atoi(buf), 0);
+  buf[len1] = '\0';
+  printf("Block receive<%s> \n",block_fetch);
+
+}
+
+main (int argc, char *argv[])
+{
+  int block_number;
+  /* read host and port number from command line */
+  if ( argc != 3 ) {
+    fprintf(stderr, "Usage: %s <host-name> <port-number>\n", argv[0]);
+    exit(1);
+  }
+
+  connectToColdServer(argv[1],atoi(argv[2]));
+  
   // Request 1 for sending 2 for fetching the block
   int req=2;
-  char playerStr[10];
+
   if(req==1)
   { 
-    char block_buff[]="SEnding you first block";
-    sprintf(playerStr,"S:%d:%d",block_number,strlen(block_buff));
-
-    len1 = send(connectSoc,playerStr, strlen(playerStr), 0);
-    if(len1 < 0)
-    { perror("send:"); exit(len1);}
-
-    // Receive ack for the request send
-    len1 = recv(connectSoc, buf, 32, 0);
-    buf[len1] = '\0';
-    printf("Connected as player and buf<%s> \n",buf);
-
-    // Send the block to hot server
-  
-    len1 = send(connectSoc,block_buff, strlen(block_buff), 0);
-    if(len1 < 0)
-    { perror("send:"); exit(len1);}
+    sendDataBlock(1);
 
   }else if(req==2)
   {
-    block_number=0;
-    sprintf(playerStr,"F:%d",block_number);
-
-    len1 = send(connectSoc,playerStr, strlen(playerStr), 0);
-    if(len1 < 0)
-    { perror("send:"); exit(len1);}
-
-    // Receive ack for the request send
-    memset(buf,'\0',sizeof(buf));
-    len1 = recv(connectSoc, buf, 32, 0);
-    buf[len1] = '\0';
-    printf("Connected as player and buf<%s> \n",buf);
-
-    char *block_fetch=malloc(sizeof(char)*atoi(buf));
-
-    len1 = send(connectSoc,"ACK", strlen("ACK"), 0);
-    if ( len1 < 0 ) 
-    {
-      perror("Fetch Block : Send ACK"); exit(1); 
-    }
-
-    len1 = recv(connectSoc, block_fetch, atoi(buf), 0);
-    buf[len1] = '\0';
-    printf("Block receive<%s> \n",block_fetch);
-
+    fetchDataBlock(0);
   }
 
-  close(soc);
+  close(connectSoc);
   exit(0);
 }
