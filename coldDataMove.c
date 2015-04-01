@@ -23,11 +23,11 @@ int main (int argc, char **argv) {
     
     // Application key and secret. To get them, create an app here:
     // https://www.dropbox.com/developers/apps
-    char *c_key    = "nac4mj3ipd9h5bg";  //< consumer key
-    char *c_secret = "64dlaxmqqjopk5v";  //< consumer secret
+    char *c_key    = "e9kwa4b6lnxk0r5";  //< consumer key
+    char *c_secret = "sr8lt6xj5izjtol";  //< consumer secret
     
     // User key and secret. Leave them NULL or set them with your AccessToken.
-    char *t_key    = "KSkQCyhUYNIAAAAAAAAACdaOg1cDsSD4GBI_Q_I7ajkC5zhzBCZnk00rtMrfmhbf"; //< access token key
+    char *t_key    = "KSkQCyhUYNIAAAAAAAAAC87g7xlvpRUDDk0WPc65iLPudEugvXhi6v1iq3hukLS_"; //< access token key
     char *t_secret = NULL;  //< access token secret
 
 	char *commandType;
