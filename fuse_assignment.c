@@ -27,38 +27,16 @@ Fuse based File system which supports POSIX functionalities.
 #include "fuse_common.h"
 #include <time.h>
 #include <pthread.h>
+#include <unistd.h>
+#include "storage.h"
 
 /*
 Initially all the function were to make sure reusability is maintain, but method switching cost is verfied after
 running postmark program. Hence lookup code is repeated in the all the function to make it faster.
 */
 
-
-typedef enum {Nfile, Ndir} Ntype;
-
-
-struct block_t {   
-  long blk_num;
-  struct block_t *nxt_blk;
-};
-
-typedef struct block_t *Block;
-
 // Array maintaining free blocks
 int *free_blk=NULL;
-
-// Main inode structure 
-struct node_t {		
-  Ntype type;
-  char name[FILENAME_SIZE];		
-  struct node_t *child;	
-  struct node_t *next;
-  Block data;
-  int len;
-  time_t access_time;
-};
-
-typedef struct node_t *Node;
 
 // defining root node here 
 Node root,buffNode;
@@ -67,10 +45,11 @@ char **memory_blocks=NULL;
 
 long long malloc_counter=0,malloc_limit=0,block_count=0, free_block_count=0;
 
-int checkStorageThreshold()
+int checkStorageThreshold(int percent)
 {
-  return (int)((free_block_count/block_count)*100) > 60 ? 1:0;
+  return (int)((free_block_count/block_count)*100) > percent ? 1:0;
 }
+
 
 int getFreeBlock()
 {
@@ -88,14 +67,8 @@ int getFreeBlock()
 
   return -1;
 }
-/*Singly linked list of all files - For cold file track*/
-typedef struct List_item {
-	Node inode; 	
-	struct List_item *next;
-}List_item ;
 
-//List_item *head = NULL;
-
+/*function to insert a Node to the back of the list specified with head*/
 void insert_back(Node inode, List_item **head) {
 	if ((head == NULL) || (inode == NULL)) return;
 	List_item *new_node = NULL;
@@ -124,7 +97,7 @@ void insert_back(Node inode, List_item **head) {
 	return;
 }
 
-/* Remove from front of List - Least accessed File/Cold File */
+/* Remove from front of List - Least accessed File/Cold File specified by head*/
 Node get_inode(List_item **head) {
 	if(head == NULL) return NULL;
 	Node ret;
@@ -168,17 +141,17 @@ List_item *sort_list(List_item *lroot) {
 	return least;
 }
 
-void print_list(List_item **acclist_head) {
+void print_access_list() {
 	List_item *temp = NULL;
 	if (acclist_head == NULL) {
 		printf("List head empty\n");
 		return;
 	}
-	if (*acclist_head == NULL) {
+	/*if (*acclist_head == NULL) {
 		printf("List is empty\n");
 		return;
-	}
-	temp = *acclist_head;
+	}*/
+	temp = acclist_head;
 	printf("Printing File access list\n");
 	while(temp != NULL) {
 		printf("%s:%ld->",temp->inode->name, temp->inode->access_time);
@@ -186,11 +159,12 @@ void print_list(List_item **acclist_head) {
 	}
 }
 
-void populate_list (List_item **acclist_head) {
+int populate_access_list() {
 	Node temp = root;
 	List_item *fs_head = NULL;
-	
-	if ((root->child == NULL) && (root->next == NULL)) return;
+	int count = 0;
+
+	if ((root->child == NULL) && (root->next == NULL)) return 0;
 	insert_back(root, &fs_head);
 	
 	while(fs_head != NULL) {
@@ -201,28 +175,42 @@ void populate_list (List_item **acclist_head) {
 				insert_back(temp, &fs_head);
 			}
 			else if(temp->type == Nfile) {
-				insert_back(temp, acclist_head);
+				insert_back(temp, &acclist_head);
+				count++;	
 			}
 			temp = temp->next;
 		}
 	}	
+	return count;	
 }
 
-/*-----------Track cold Files---------*/
+/*-----------------Track cold Files---------------*/
 
 void *track_cold_files() {
+	int num_files;
+	Node node_to_transfer = NULL;
+
 	printf("One Thread getting called\n");
 	sleep(120);
-	List_item *acclist_head = NULL;
+	//List_item *acclist_head = NULL;
 	printf("Thread getting called\n");
 	
-	populate_list(&acclist_head);
-	print_list(&acclist_head);	
+	num_files = populate_access_list();
+	print_access_list();	
 	printf("\nDone printing\n");
 	acclist_head = sort_list(acclist_head);
 	printf("\nSorting done\n");
-	print_list(&acclist_head);	
-	printf("\nSecond Printing  done\n");
+	print_access_list();	
+	printf("\nSorted Printing  done\n");
+	
+	/*Code to transfer Files*/	
+	/*while ((checkStorageThreshold(40)) && (acclist_head != NULL)) {   //Until the storage utilization drops to 40% continue giving noDe
+	  node_to_transfer = get_inode(&acclist_head);
+	  access_cold_blocks(node_to_transfer);	
+	}
+	if((acclist == NULL) && (checkStorageThreshold(40))) {
+	 printf("Storage full but access list empty\n");
+	}*/
 	pthread_exit(NULL);
 }
 
@@ -1077,6 +1065,9 @@ off_t offset, struct fuse_file_info *fi)
 {
 	
   Node dirNode=root;
+  pthread_t thread;
+  int ret;
+
 
   char lpath[100];
   memset(lpath,'\0',100);
@@ -1237,6 +1228,14 @@ off_t offset, struct fuse_file_info *fi)
   dirNode->len=(size+offset) > dirNode->len? (size+offset):dirNode->len;
   dirNode->access_time = time(NULL);
 
+  //if(checkStorageThreshold(80)) {
+  /*multithread to keep track of cold files*/
+  ret = pthread_create ( &thread, NULL, track_cold_files, NULL);
+	if(ret) {
+		printf("Pthread create failed\n");
+		exit(1);
+   }
+  //}		
   return size;
 }
 
@@ -1448,9 +1447,7 @@ int main(int argc, char *argv[])
 {
   int eflag=0,pstr=0,i;
   FILE * fp;
-  pthread_t thread1, thread2;
-  int ret1, ret2;
-  
+   
 
   if(argc < 3 || argc >4)
   {
@@ -1459,7 +1456,7 @@ int main(int argc, char *argv[])
   }
 
   malloc_limit=atoi(argv[2]);
-  printf("Malloc limit <%d>\n",malloc_limit);
+  printf("Malloc limit <%ld>\n",malloc_limit);
   // Setting up block allocation for the in-memory file system
   free_block_count=block_count=(malloc_limit*MB_CONVERT)/BLOCK_SIZE; 
   memory_blocks = malloc(block_count * sizeof(char*));
@@ -1479,7 +1476,7 @@ int main(int argc, char *argv[])
     memset(memory_blocks[i],'\0',BLOCK_SIZE);
   }
 
-  printf("before free block count malloc bloc count <%d> \n",block_count);
+  printf("before free block count malloc bloc count <%ld> \n",block_count);
   // Initialize the free block structure
   free_blk=malloc(block_count * sizeof(int));
   if ( free_blk == NULL ) {
@@ -1526,15 +1523,16 @@ int main(int argc, char *argv[])
   //  eflag=makeSamplefile();
 
   printf("before the fuse main \n");
-  /*multithread to keep track of cold files*/
+  /*multithread to keep track of cold files
 	ret1 = pthread_create ( &thread1, NULL, track_cold_files, NULL);
 	if(ret1) {
 		printf(stderr, "Pthread create failed\n");
 		exit(1);
    }	
-
+  */
   eflag=fuse_main(argc, argv, &rmfs_oper, NULL);
 
+	printf("After fuse main\n");
   if(pstr == 1)
   {
     char prefix[1000]="/";
@@ -1548,7 +1546,7 @@ int main(int argc, char *argv[])
     fclose(fp);
   }
   
-  pthread_join(thread1, NULL);
+  //pthread_join(thread, NULL);
   return eflag;
 }
 
