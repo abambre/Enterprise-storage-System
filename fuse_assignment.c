@@ -39,33 +39,8 @@ Initially all the function were to make sure reusability is maintain, but method
 running postmark program. Hence lookup code is repeated in the all the function to make it faster.
  */
 
-typedef enum {Nfile, Ndir} Ntype;
-
-typedef enum {False, True } Bool;
-
-struct block_t {
-	long blk_num;
-	char * server_block_hash;
-	struct block_t *nxt_blk;
-	Bool inmemory_flag;
-};
-
-typedef struct block_t *Block;
-
 // Array maintaining free blocks
 int *free_blk=NULL;
-
-// Main inode structure
-struct node_t {
-	Ntype type;
-	char name[FILENAME_SIZE];
-	struct node_t *child;
-	struct node_t *next;
-	Block data;
-	int len;
-};
-
-typedef struct node_t *Node;
 
 // defining root node here 
 
@@ -81,7 +56,7 @@ GHashTable* hashtree;
 
 int checkStorageThreshold(int percent)
 {
-  return (int)((free_block_count/block_count)*100) > percent ? 1:0;
+	return (int)((free_block_count/block_count)*100) > percent ? 1:0;
 }
 
 int getFreeBlock()
@@ -90,15 +65,15 @@ int getFreeBlock()
 	int i;
 
 
-  for(i=0;i<block_count;i++)
-  {
-    if(free_blk[i]==-1)
-    {
-      free_blk[i]=0;
-      free_block_count++;
-      return i;
-    }  
-  }
+	for(i=0;i<block_count;i++)
+	{
+		if(free_blk[i]==-1)
+		{
+			free_blk[i]=0;
+			free_block_count++;
+			return i;
+		}  
+	}
 
 	return -1;
 }
@@ -110,10 +85,10 @@ void insert_back(Node inode, List_item **head) {
 	List_item *curr = NULL;
 
 	new_node = (List_item *)malloc(sizeof(List_item));
-  if(NULL == new_node) {
-    printf("Malloc Error\n");
-    return;
- 	}
+	if(NULL == new_node) {
+		printf("Malloc Error\n");
+		return;
+	}
 	new_node->inode = inode;
 	new_node->next = NULL;
 
@@ -122,7 +97,7 @@ void insert_back(Node inode, List_item **head) {
 		*head = new_node;
 		return;
 	}	
-	
+
 	//Insert back
 	curr = *head;
 	while(curr->next != NULL) {
@@ -149,22 +124,22 @@ List_item *sort_list(List_item *lroot) {
 	double seconds;
 	List_item *curr = NULL, *least = NULL, *least_prev = NULL, *prev = NULL;
 	List_item *tmp = NULL;
-	
+
 	if ( (lroot == NULL) || (lroot->next == NULL) ) 
 		return lroot;
-		
+
 	curr = least = least_prev = prev = lroot;
 	while(curr != NULL) {
 		seconds = difftime(least->inode->access_time,curr->inode->access_time);
-  	if (seconds > 0) {  // printf("Date1 > Date2\n");
-  		                  //if (curr->inode->access_time < least->inode->access_time) {
+		if (seconds > 0) {  // printf("Date1 > Date2\n");
+			//if (curr->inode->access_time < least->inode->access_time) {
 			least_prev = prev;
 			least = curr;
 		}
 		prev = curr;
 		curr = curr->next;		
 	}	
-	
+
 	if(least != lroot) {
 		least_prev->next = lroot;
 		tmp = lroot->next;
@@ -201,7 +176,7 @@ int populate_access_list() {
 
 	if ((root->child == NULL) && (root->next == NULL)) return 0;
 	insert_back(root, &fs_head);
-	
+
 	while(fs_head != NULL) {
 		temp = get_inode(&fs_head);
 		temp = temp->child;
@@ -229,7 +204,7 @@ void *track_cold_files() {
 	sleep(120);
 	//List_item *acclist_head = NULL;
 	printf("Thread getting called\n");
-	
+
 	num_files = populate_access_list();
 	print_access_list();	
 	printf("\nDone printing\n");
@@ -237,7 +212,7 @@ void *track_cold_files() {
 	printf("\nSorting done\n");
 	print_access_list();	
 	printf("\nSorted Printing  done\n");
-	
+
 	/*Code to transfer Files*/	
 	/*while ((checkStorageThreshold(40)) && (acclist_head != NULL)) {   //Until the storage utilization drops to 40% continue giving noDe
 	  node_to_transfer = get_inode(&acclist_head);
@@ -267,7 +242,7 @@ int ckmalloc(unsigned l,Node *t)
 	}
 	memset(p,'\0',l);
 	*t=p;
-  	//malloc_counter+=l;
+	//malloc_counter+=l;
 
 	return 0;
 }
@@ -283,29 +258,29 @@ int ckmalloc_w(unsigned l,char **t)
 		return ENOSPC;
 	}
 
-  p = malloc(l);
-  if ( p == NULL ) {
-    perror("malloc");
-    return errno;
-  }
-  memset(p,'\0',l);
-  *t=p;
-  //malloc_counter+=l;
-  return 0;
+	p = malloc(l);
+	if ( p == NULL ) {
+		perror("malloc");
+		return errno;
+	}
+	memset(p,'\0',l);
+	*t=p;
+	//malloc_counter+=l;
+	return 0;
 }
 
 void freeBlock(Block blk)
 {
 
-  if(blk==NULL)
-    return;
-  freeBlock(blk->nxt_blk);
-  free_blk[blk->blk_num]=-1;
+	if(blk==NULL)
+		return;
+	freeBlock(blk->nxt_blk);
+	free_blk[blk->blk_num]=-1;
 	/****Changes***********************************************/
 	free_blk[blk->inmemory_flag]=True;
-  memset(memory_blocks[blk->blk_num],'\0',BLOCK_SIZE);
-  free(blk);
-  free_block_count--;
+	memset(memory_blocks[blk->blk_num],'\0',BLOCK_SIZE);
+	free(blk);
+	free_block_count--;
 }
 
 // freess memory
@@ -314,15 +289,15 @@ void freemalloc(Node n)
 
 	printf("\n\nIn freemalloc!!!!!!!!!!!\n\n");
 
-  long totalsize=0;
-  if(n->data!=NULL)
-  {
-    totalsize+=n->len;
-    freeBlock(n->data);
-  }
-  totalsize+=sizeof(*root);
-  free(n);
-  //malloc_counter-=totalsize;
+	long totalsize=0;
+	if(n->data!=NULL)
+	{
+		totalsize+=n->len;
+		freeBlock(n->data);
+	}
+	totalsize+=sizeof(*root);
+	free(n);
+	//malloc_counter-=totalsize;
 }
 
 //  Lookup function to serach for the particular node by traversing the path from root
@@ -593,7 +568,7 @@ static int rmfs_read(const char *path, char *buf, size_t size, off_t offset,
 	len = dirNode->len;
 
 	dirNode->access_time = time(NULL);
-	
+
 	if (offset < len) {  
 		if (offset + size > len)
 			size = len - offset;
@@ -702,12 +677,12 @@ static int rmfs_mkdir(const char *path, mode_t mode)
 	memset(newDirNode,'\0',sizeof(*root));
 
 
-  newDirNode->type=Ndir;
-  //newDirNode->data->blk_num=-1;
-  newDirNode->access_time = time(NULL);
+	newDirNode->type=Ndir;
+	//newDirNode->data->blk_num=-1;
+	newDirNode->access_time = time(NULL);
 
-  newDirNode->data=NULL;
-  strncpy(newDirNode->name,a,sizeof(a));
+	newDirNode->data=NULL;
+	strncpy(newDirNode->name,a,sizeof(a));
 
 	memset(spiltstr,'\0',100);
 	memcpy(spiltstr,path,strlen(path));
@@ -781,13 +756,13 @@ static int rmfs_mknod(const char *path, mode_t mode, dev_t rdev)
 		return -ENOSPC;
 	}
 
-  newDirNode = malloc(sizeof(*root));
-  if ( newDirNode == NULL ) {
-    perror("malloc");
-    return errno;
-  }
-//malloc_counter+=sizeof(*root);
-  memset(newDirNode,'\0',sizeof(*root));
+	newDirNode = malloc(sizeof(*root));
+	if ( newDirNode == NULL ) {
+		perror("malloc");
+		return errno;
+	}
+	//malloc_counter+=sizeof(*root);
+	memset(newDirNode,'\0',sizeof(*root));
 
 	newDirNode->type=Nfile;
 	//newDirNode->data->blk_num=-1;
@@ -886,20 +861,20 @@ static int rmfs_create(const char *path, mode_t t,struct fuse_file_info *fi)
   }
 	 */
 
-  newDirNode = malloc(sizeof(*root));
-  if ( newDirNode == NULL ) {
-    perror("malloc");
-    return errno;
-  }
-  //malloc_counter+=sizeof(*root);
-  memset(newDirNode,'\0',sizeof(*root));
+	newDirNode = malloc(sizeof(*root));
+	if ( newDirNode == NULL ) {
+		perror("malloc");
+		return errno;
+	}
+	//malloc_counter+=sizeof(*root);
+	memset(newDirNode,'\0',sizeof(*root));
 
-  newDirNode->type=Nfile;
-  //newDirNode->data->blk_num=-1;
-  newDirNode->data=NULL;
-  newDirNode->access_time = time(NULL);
+	newDirNode->type=Nfile;
+	//newDirNode->data->blk_num=-1;
+	newDirNode->data=NULL;
+	newDirNode->access_time = time(NULL);
 
-  strncpy(newDirNode->name,a,sizeof(a));
+	strncpy(newDirNode->name,a,sizeof(a));
 
 	memset(spiltstr,'\0',100);
 	memcpy(spiltstr,path,strlen(path));
@@ -1090,11 +1065,11 @@ static int rmfs_truncate(const char *path, off_t size)
 	if(dirNode->data==NULL)
 		return 0;
 
-//malloc_counter-=dirNode->len;
-    freeBlock(dirNode->data);
-    dirNode->access_time = time(NULL);
+	//malloc_counter-=dirNode->len;
+	freeBlock(dirNode->data);
+	dirNode->access_time = time(NULL);
 	dirNode->data=NULL;
-    //memset(dirNode->data,'\0',strlen(dirNode->data));
+	//memset(dirNode->data,'\0',strlen(dirNode->data));
 	return 0;
 }
 
@@ -1127,10 +1102,10 @@ static int rmfs_utimens(const char* path, const struct timespec ts[2])
 static int rmfs_write(const char *path, const char *buf, size_t size,
 		off_t offset, struct fuse_file_info *fi)
 {
-	
-  Node dirNode=root;
-  pthread_t thread;
-  int ret;
+
+	Node dirNode=root;
+	pthread_t thread;
+	int ret;
 
 
 	char lpath[100];
@@ -1168,102 +1143,72 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 	int buff_size=size,tmp_offset=offset;
 	Block prev_blk=NULL;
 
-  // printf(" Before the actual writing \n" );
-  int fblk,charcpy=0;
-  if(dirNode->data==NULL)
-  {
-    //printf(" Inside the data -> NULL and data is <%s>\n",buf );
-    dirNode->data=prev_blk=malloc(sizeof(struct block_t));
-    if(dirNode->data == NULL)
-    {
-      perror("malloc");
-      return errno;
-    }
-
-    fblk=getFreeBlock();
-    dirNode->data->blk_num=fblk;
-    dirNode->data->nxt_blk=NULL;
-   // printf("Wriitn in the block <%d>\n",fblk );
-
-    while(charcpy < size)
-    {  
-      int dchar=(buff_size > BLOCK_SIZE?BLOCK_SIZE:buff_size);
-      //printf("Before writing in the block tmp_offset <%d> dchar <%d>\n",tmp_offset,dchar );
-
-      strncpy((memory_blocks[fblk] + tmp_offset),(buf+ charcpy),dchar);
-      charcpy+=dchar;
-      buff_size-=BLOCK_SIZE;
-      tmp_offset=0;
-      
-      if(charcpy < size)
-      {
-        //printf("Shouldn't be here\n");
-        fblk=getFreeBlock();
-        prev_blk->nxt_blk=malloc(sizeof(struct block_t));
-        prev_blk->nxt_blk->blk_num=fblk;
-        prev_blk->nxt_blk->nxt_blk=NULL;
-        if(prev_blk->nxt_blk == NULL)
-        {
-          perror("malloc");
-          return errno;
-        }
-        prev_blk=prev_blk->nxt_blk;
-      } 
-      
-    }
-    //printf("Aftet the exist data <%s>\n",memory_blocks[dirNode->data->blk_num]);
-  } 
-  else
-  {
-
-    //printf("Inside the appended section offset <%d> size <%d> block number <%d>\n",offset,size ,dirNode->data->blk_num);
-    Block offset_blk=dirNode->data;
-    int offset_loop=1;
-    while(offset > (BLOCK_SIZE * offset_loop))
-    {
-      prev_blk=offset_blk;
-      offset_blk=offset_blk->nxt_blk;
-      //printf("Next block is : <%d>\n", offset_blk->blk_num);
-      offset_loop++;
-    }
-
-
-    while(charcpy < size)
-    {  
-      if(offset_blk==NULL)
-      {
-        fblk=getFreeBlock();
-        //printf("Shouldn be here <%d>\n",fblk );
-        offset_blk=prev_blk->nxt_blk=malloc(sizeof(struct block_t));
-        if(offset_blk == NULL)
-        {
-          perror("malloc");
-          return errno;
-        }
-        prev_blk->nxt_blk->blk_num=fblk;
-        prev_blk->nxt_blk->nxt_blk=NULL;
-      }
-      int dmove= (tmp_offset+buff_size)>(BLOCK_SIZE*offset_loop)?(BLOCK_SIZE*offset_loop - tmp_offset): buff_size;
-      int recal_offset= tmp_offset - (BLOCK_SIZE*(offset_loop - 1));
-
-      //printf("Will bewriting data as dmove <%d> recal_offset <%d> charcpy <%d>\n",dmove,recal_offset,charcpy);
-
-      strncpy(memory_blocks[offset_blk->blk_num] + recal_offset,(buf+ charcpy),dmove);
-      charcpy+=dmove;
-      buff_size-=dmove;
-      tmp_offset=BLOCK_SIZE*offset_loop;
-      offset_loop++;
-      prev_blk=offset_blk;
-      offset_blk=offset_blk->nxt_blk;
-    }
-  }
+	// printf(" Before the actual writing \n" );
+	int fblk,charcpy=0;
+	if(dirNode->data==NULL)
+	{
+		//printf(" Inside the data -> NULL and data is <%s>\n",buf );
+		dirNode->data=prev_blk=malloc(sizeof(struct block_t));
+		if(dirNode->data == NULL)
+		{
+			perror("malloc");
+			return errno;
+		}
+	
+			fblk=getFreeBlock();
+		dirNode->data->blk_num=fblk;
+		dirNode->data->nxt_blk=NULL;
+		// printf("Wriitn in the block <%d>\n",fblk );
 
 		while(charcpy < size)
+		{  
+			int dchar=(buff_size > BLOCK_SIZE?BLOCK_SIZE:buff_size);
+			//printf("Before writing in the block tmp_offset <%d> dchar <%d>\n",tmp_offset,dchar );
+
+			strncpy((memory_blocks[fblk] + tmp_offset),(buf+ charcpy),dchar);
+			charcpy+=dchar;
+			buff_size-=BLOCK_SIZE;
+			tmp_offset=0;
+
+			if(charcpy < size)
+			{
+				//printf("Shouldn't be here\n");
+				fblk=getFreeBlock();
+				prev_blk->nxt_blk=malloc(sizeof(struct block_t));
+				prev_blk->nxt_blk->blk_num=fblk;
+				prev_blk->nxt_blk->nxt_blk=NULL;
+				if(prev_blk->nxt_blk == NULL)
+				{
+					perror("malloc");
+					return errno;
+				}
+				prev_blk=prev_blk->nxt_blk;
+			} 
+
+		}
+		//printf("Aftet the exist data <%s>\n",memory_blocks[dirNode->data->blk_num]);
+	} 
+	else
+	{
+
+		//printf("Inside the appended section offset <%d> size <%d> block number <%d>\n",offset,size ,dirNode->data->blk_num);
+		Block offset_blk=dirNode->data;
+		int offset_loop=1;
+		while(offset > (BLOCK_SIZE * offset_loop))
 		{
+			prev_blk=offset_blk;
+			offset_blk=offset_blk->nxt_blk;
+			//printf("Next block is : <%d>\n", offset_blk->blk_num);
+			offset_loop++;
+		}
+
+
+		while(charcpy < size)
+		{  
 			if(offset_blk==NULL)
 			{
 				fblk=getFreeBlock();
-				printf("Shouldn be here <%d>\n",fblk );
+				//printf("Shouldn be here <%d>\n",fblk );
 				offset_blk=prev_blk->nxt_blk=malloc(sizeof(struct block_t));
 				if(offset_blk == NULL)
 				{
@@ -1276,7 +1221,7 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 			int dmove= (tmp_offset+buff_size)>(BLOCK_SIZE*offset_loop)?(BLOCK_SIZE*offset_loop - tmp_offset): buff_size;
 			int recal_offset= tmp_offset - (BLOCK_SIZE*(offset_loop - 1));
 
-			printf("Will bewriting data as dmove <%d> recal_offset <%d> charcpy <%d>\n",dmove,recal_offset,charcpy);
+			//printf("Will bewriting data as dmove <%d> recal_offset <%d> charcpy <%d>\n",dmove,recal_offset,charcpy);
 
 			strncpy(memory_blocks[offset_blk->blk_num] + recal_offset,(buf+ charcpy),dmove);
 			charcpy+=dmove;
@@ -1288,7 +1233,7 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 		}
 	}
 
-	/*
+/*
   if(dirNode->data!=NULL)
     	len=dirNode->len;
   int mlc_chk=0;
@@ -1318,36 +1263,36 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 	//printf("dir data :%s\n",dirNode->data);
 	strncpy(dirNode->data + offset,buf, size);
 	//printf(">>>> after dir data :%s\n",dirNode->data);
-  */
-  dirNode->len=(size+offset) > dirNode->len? (size+offset):dirNode->len;
-  dirNode->access_time = time(NULL);
+ */
+dirNode->len=(size+offset) > dirNode->len? (size+offset):dirNode->len;
+dirNode->access_time = time(NULL);
 
-  //if(checkStorageThreshold(80)) {
-  /*multithread to keep track of cold files*/
-  ret = pthread_create ( &thread, NULL, track_cold_files, NULL);
-	if(ret) {
-		printf("Pthread create failed\n");
-		exit(1);
-   }
-  //}		
-  return size;
+//if(checkStorageThreshold(80)) {
+/*multithread to keep track of cold files*/
+ret = pthread_create ( &thread, NULL, track_cold_files, NULL);
+if(ret) {
+	printf("Pthread create failed\n");
+	exit(1);
+}
+//}		
+return size;
 }
 
 
 // file rename
 static int rmfs_rename(const char *path,const char *path1)
 {
-  Node dirNode=NULL;
-  char b[FILENAME_SIZE];
-  memset(b,'\0',FILENAME_SIZE);
-  getFileName(path1,b);
+	Node dirNode=NULL;
+	char b[FILENAME_SIZE];
+	memset(b,'\0',FILENAME_SIZE);
+	getFileName(path1,b);
 
-  int errChk=directory_lookup(path,&dirNode,0);
-  if(errChk!=0) { 
-      return -ENOENT; }
-  strncpy(dirNode->name,b,sizeof(b));
-  dirNode->access_time = time(NULL);
-  return 0;
+	int errChk=directory_lookup(path,&dirNode,0);
+	if(errChk!=0) { 
+		return -ENOENT; }
+	strncpy(dirNode->name,b,sizeof(b));
+	dirNode->access_time = time(NULL);
+	return 0;
 }
 
 // This functiona is library defined , used for mapping which above functions to call with corresponding operation
@@ -1692,7 +1637,7 @@ char * hash_calc(Block cold_block)
 
 /***********************Code for Getting Server Side Hashtree (hashOfBlock -> BlockNames)***************/
 void iterator(gpointer key, gpointer value, gpointer user_data) {
- printf(user_data, key, value);
+	printf(user_data, key, value);
 }
 
 void create_hashtree(){
@@ -1706,12 +1651,12 @@ void create_hashtree(){
 	FILE *hash_file;
 	hash_file= fopen("./dropbox_hashtree.txt", "r");
 
-    while(fgets(linebuff, sizeof(linebuff), hash_file)){
-        sscanf(linebuff,"%s %s",hash,block_name);
-        g_hash_table_insert(hashtree,  g_strdup(hash),  g_strdup(block_name));
+	while(fgets(linebuff, sizeof(linebuff), hash_file)){
+		sscanf(linebuff,"%s %s",hash,block_name);
+		g_hash_table_insert(hashtree,  g_strdup(hash),  g_strdup(block_name));
 
-        block_number++;
-    }
+		block_number++;
+	}
 
 	fclose(hash_file);
 }
@@ -1763,7 +1708,7 @@ void update_hashtree(char *hash){
 	FILE * file= fopen("./dropbox_hashtree.txt", "a");
 	if (file != NULL) {
 		fprintf(file, "%s %s\n", hash, block_name);
-	fclose(file);
+		fclose(file);
 	}
 }
 
@@ -1786,112 +1731,112 @@ void update_hashtree(char *hash){
 int main(int argc, char *argv[])
 {
 
-  int eflag=0,pstr=0,i;
-  FILE * fp;
-   
+	int eflag=0,pstr=0,i;
+	FILE * fp;
 
-  if(argc < 3 || argc >4)
-  {
-    printf("Usage : ./ramdisk <mount_point> <size in MB> <Restore Filepath> \n");
-    exit(-1);
-  }
+
+	if(argc < 3 || argc >4)
+	{
+		printf("Usage : ./ramdisk <mount_point> <size in MB> <Restore Filepath> \n");
+		exit(-1);
+	}
 
 	cli = intialize_drop_box();
 	printf("Cli: %s", cli);
 	block_number = 0;
 
-  malloc_limit=atoi(argv[2]);
-  printf("Malloc limit <%ld>\n",malloc_limit);
-  // Setting up block allocation for the in-memory file system
-  free_block_count=block_count=(malloc_limit*MB_CONVERT)/BLOCK_SIZE; 
-  memory_blocks = malloc(block_count * sizeof(char*));
-  if ( memory_blocks == NULL ) {
-      perror("malloc");
-      return errno;
-  }
-   printf("after block count malloc  \n");
-  for(i=0;i<block_count; i++)
-  {
-    memory_blocks[i]=malloc(BLOCK_SIZE * sizeof(char));
+	malloc_limit=atoi(argv[2]);
+	printf("Malloc limit <%ld>\n",malloc_limit);
+	// Setting up block allocation for the in-memory file system
+	free_block_count=block_count=(malloc_limit*MB_CONVERT)/BLOCK_SIZE; 
+	memory_blocks = malloc(block_count * sizeof(char*));
+	if ( memory_blocks == NULL ) {
+		perror("malloc");
+		return errno;
+	}
+	printf("after block count malloc  \n");
+	for(i=0;i<block_count; i++)
+	{
+		memory_blocks[i]=malloc(BLOCK_SIZE * sizeof(char));
 
-    if ( memory_blocks[i] == NULL ) {
-      perror("malloc");
-      return errno;
-    }
-    memset(memory_blocks[i],'\0',BLOCK_SIZE);
-  }
+		if ( memory_blocks[i] == NULL ) {
+			perror("malloc");
+			return errno;
+		}
+		memset(memory_blocks[i],'\0',BLOCK_SIZE);
+	}
 
-  printf("before free block count malloc bloc count <%ld> \n",block_count);
-  // Initialize the free block structure
-  free_blk=malloc(block_count * sizeof(int));
-  if ( free_blk == NULL ) {
-      perror("malloc");
-      return errno;
-  }
+	printf("before free block count malloc bloc count <%ld> \n",block_count);
+	// Initialize the free block structure
+	free_blk=malloc(block_count * sizeof(int));
+	if ( free_blk == NULL ) {
+		perror("malloc");
+		return errno;
+	}
 
-  for(i=0;i<block_count; i++)
-  {
-    free_blk[i]=-1;
-  }  
+	for(i=0;i<block_count; i++)
+	{
+		free_blk[i]=-1;
+	}  
 
-  // argv[2]="-d";
+	// argv[2]="-d";
 
-  if(argc == 4)
-    pstr=1;
-  //argc=3;
-  argc=2;
-  //defining the root element
+	if(argc == 4)
+		pstr=1;
+	//argc=3;
+	argc=2;
+	//defining the root element
 
-  printf("D1\n");
+	printf("D1\n");
 
-  int mlc_chk=ckmalloc(sizeof(*root),&root);
-  if(mlc_chk!=0)
-      return mlc_chk;
+	int mlc_chk=ckmalloc(sizeof(*root),&root);
+	if(mlc_chk!=0)
+		return mlc_chk;
 
-  printf("D2\n");
-  strncpy(root->name,"/",strlen("/"));
-  root->type=Ndir;
-  root->next=root->child=NULL;
-  root->data=NULL;
+	printf("D2\n");
+	strncpy(root->name,"/",strlen("/"));
+	root->type=Ndir;
+	root->next=root->child=NULL;
+	root->data=NULL;
 
-  printf("D3\n");  
-  if(pstr == 1)
-  {    
-   printf("D4\n"); 
-    fp = fopen (argv[3], "a+");
-    if (fp == NULL)
-      exit(EXIT_FAILURE);
-    // call to restore the path
-   // usePersistentFile(&fp);
-    fclose(fp);
-  }
-  //  eflag=makeSamplefile();
+	printf("D3\n");  
+	if(pstr == 1)
+	{    
+		printf("D4\n"); 
+		fp = fopen (argv[3], "a+");
+		if (fp == NULL)
+			exit(EXIT_FAILURE);
+		// call to restore the path
+		// usePersistentFile(&fp);
+		fclose(fp);
+	}
+	//  eflag=makeSamplefile();
 
-  printf("before the fuse main \n");
-  /*multithread to keep track of cold files
+	printf("before the fuse main \n");
+	/*multithread to keep track of cold files
 	ret1 = pthread_create ( &thread1, NULL, track_cold_files, NULL);
 	if(ret1) {
 		printf(stderr, "Pthread create failed\n");
 		exit(1);
    }	
-  */
-  eflag=fuse_main(argc, argv, &rmfs_oper, NULL);
+	 */
+	eflag=fuse_main(argc, argv, &rmfs_oper, NULL);
 
 	printf("After fuse main\n");
-  if(pstr == 1)
-  {
-    char prefix[1000]="/";
-    fp = fopen (argv[3], "w+");
-    if (fp == NULL)
-       exit(EXIT_FAILURE);
+	if(pstr == 1)
+	{
+		char prefix[1000]="/";
+		fp = fopen (argv[3], "w+");
+		if (fp == NULL)
+			exit(EXIT_FAILURE);
 
-    // Make FS persistent
-  //  writeToFile(&fp,prefix,root->child);
-   
-    fclose(fp);
-  }
-  
-  //pthread_join(thread, NULL);
-  return eflag;
+		// Make FS persistent
+		//  writeToFile(&fp,prefix,root->child);
+
+		fclose(fp);
+	}
+
+	//pthread_join(thread, NULL);
+	return eflag;
 }
 

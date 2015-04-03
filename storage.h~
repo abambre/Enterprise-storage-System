@@ -6,13 +6,9 @@
 
 typedef enum {Nfile, Ndir} Ntype;
 
-typedef enum {False, True } Bool;
-
 struct block_t {   
   long blk_num;
   struct block_t *nxt_blk;
-	char * server_block_hash;
-	Bool inmemory_flag;
 };
 
 typedef struct block_t *Block;
