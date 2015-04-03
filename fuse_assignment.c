@@ -39,8 +39,6 @@ Initially all the function were to make sure reusability is maintain, but method
 running postmark program. Hence lookup code is repeated in the all the function to make it faster.
  */
 
-<<<<<<< HEAD
-
 typedef enum {Nfile, Ndir} Ntype;
 
 typedef enum {False, True } Bool;
@@ -54,24 +52,9 @@ struct block_t {
 
 typedef struct block_t *Block;
 
-||||||| merged common ancestors
-
-typedef enum {Nfile, Ndir} Ntype;
-
-
-struct block_t {   
-  long blk_num;
-  struct block_t *nxt_blk;
-};
-
-typedef struct block_t *Block;
-
-=======
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 // Array maintaining free blocks
 int *free_blk=NULL;
 
-<<<<<<< HEAD
 // Main inode structure
 struct node_t {
 	Ntype type;
@@ -84,67 +67,29 @@ struct node_t {
 
 typedef struct node_t *Node;
 
-// defining root node here
-||||||| merged common ancestors
-// Main inode structure 
-struct node_t {		
-  Ntype type;
-  char name[FILENAME_SIZE];		
-  struct node_t *child;	
-  struct node_t *next;
-  Block data;
-  int len;
-};
-
-typedef struct node_t *Node;
-
 // defining root node here 
-=======
-// defining root node here 
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
+
 Node root,buffNode;
 char **memory_blocks=NULL;
 
 // As there is input limit for the memory defining global variables
 long long malloc_counter=0,malloc_limit=0,block_count=0, free_block_count=0;
 
-<<<<<<< HEAD
 drbClient *cli;
 int block_number;
 GHashTable* hashtree;
-||||||| merged common ancestors
-=======
+
 int checkStorageThreshold(int percent)
 {
   return (int)((free_block_count/block_count)*100) > percent ? 1:0;
 }
-
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 
 int getFreeBlock()
 {
 	printf("\n\nIn getFreeBlock!!!!!!!!!!!\n\n");
 	int i;
 
-<<<<<<< HEAD
-	for(i=0;i<block_count;i++)
-	{
-		if(free_blk[i]==-1)
-		{
-			free_blk[i]=0;
-			return i;
-		}
-	}
-||||||| merged common ancestors
-  for(i=0;i<block_count;i++)
-  {
-    if(free_blk[i]==-1)
-    {
-      free_blk[i]=0;
-      return i;
-    }  
-  }
-=======
+
   for(i=0;i<block_count;i++)
   {
     if(free_blk[i]==-1)
@@ -154,7 +99,6 @@ int getFreeBlock()
       return i;
     }  
   }
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 
 	return -1;
 }
@@ -311,11 +255,10 @@ int ckmalloc(unsigned l,Node *t)
 	printf("\n\nIn ckmalloc!!!!!!!!!!!\n\n");
 	void *p;
 	/*
-  if(malloc_limit < (malloc_counter+l))
+  	))
   {
     return ENOSPC;
   }
-<<<<<<< HEAD
 	 */
 	p = malloc(l);
 	if ( p == NULL ) {
@@ -324,16 +267,7 @@ int ckmalloc(unsigned l,Node *t)
 	}
 	memset(p,'\0',l);
 	*t=p;
-	malloc_counter+=l;
-||||||| merged common ancestors
-  memset(p,'\0',l);
-  *t=p;
-  malloc_counter+=l;
-=======
-  memset(p,'\0',l);
-  *t=p;
-  //malloc_counter+=l;
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
+  	//malloc_counter+=l;
 
 	return 0;
 }
@@ -349,27 +283,6 @@ int ckmalloc_w(unsigned l,char **t)
 		return ENOSPC;
 	}
 
-<<<<<<< HEAD
-	p = malloc(l);
-	if ( p == NULL ) {
-		perror("malloc");
-		return errno;
-	}
-	memset(p,'\0',l);
-	*t=p;
-	malloc_counter+=l;
-	return 0;
-||||||| merged common ancestors
-  p = malloc(l);
-  if ( p == NULL ) {
-    perror("malloc");
-    return errno;
-  }
-  memset(p,'\0',l);
-  *t=p;
-  malloc_counter+=l;
-  return 0;
-=======
   p = malloc(l);
   if ( p == NULL ) {
     perror("malloc");
@@ -379,64 +292,28 @@ int ckmalloc_w(unsigned l,char **t)
   *t=p;
   //malloc_counter+=l;
   return 0;
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 }
 
 void freeBlock(Block blk)
 {
-<<<<<<< HEAD
-	printf("\n\nIn freeBlock!!!!!!!!!!!\n\n");
-	if(blk==NULL)
-		return;
-	freeBlock(blk->nxt_blk);
-	free_blk[blk->blk_num]=-1;
+
+  if(blk==NULL)
+    return;
+  freeBlock(blk->nxt_blk);
+  free_blk[blk->blk_num]=-1;
 	/****Changes***********************************************/
 	free_blk[blk->inmemory_flag]=True;
-	memset(memory_blocks[blk->blk_num],'\0',BLOCK_SIZE);
-	free(blk);
-||||||| merged common ancestors
-  if(blk==NULL)
-    return;
-  freeBlock(blk->nxt_blk);
-  free_blk[blk->blk_num]=-1;
-  memset(memory_blocks[blk->blk_num],'\0',BLOCK_SIZE);
-  free(blk);
-=======
-  if(blk==NULL)
-    return;
-  freeBlock(blk->nxt_blk);
-  free_blk[blk->blk_num]=-1;
   memset(memory_blocks[blk->blk_num],'\0',BLOCK_SIZE);
   free(blk);
   free_block_count--;
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 }
 
 // freess memory
 void freemalloc(Node n)
 {
-<<<<<<< HEAD
+
 	printf("\n\nIn freemalloc!!!!!!!!!!!\n\n");
-	long totalsize=0;
-	if(n->data!=NULL)
-	{
-		totalsize+=n->len;
-		freeBlock(n->data);
-	}
-	totalsize+=sizeof(*root);
-	free(n);
-	malloc_counter-=totalsize;
-||||||| merged common ancestors
-  long totalsize=0;
-  if(n->data!=NULL)
-  {
-    totalsize+=n->len;
-    freeBlock(n->data);
-  }
-  totalsize+=sizeof(*root);
-  free(n);
-  malloc_counter-=totalsize;
-=======
+
   long totalsize=0;
   if(n->data!=NULL)
   {
@@ -446,7 +323,6 @@ void freemalloc(Node n)
   totalsize+=sizeof(*root);
   free(n);
   //malloc_counter-=totalsize;
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 }
 
 //  Lookup function to serach for the particular node by traversing the path from root
@@ -715,17 +591,10 @@ static int rmfs_read(const char *path, char *buf, size_t size, off_t offset,
 		return 0;
 
 	len = dirNode->len;
-<<<<<<< HEAD
 
-	if (offset < len) {
-||||||| merged common ancestors
-
-	if (offset < len) {  
-=======
 	dirNode->access_time = time(NULL);
 	
 	if (offset < len) {  
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 		if (offset + size > len)
 			size = len - offset;
 
@@ -832,24 +701,13 @@ static int rmfs_mkdir(const char *path, mode_t mode)
 
 	memset(newDirNode,'\0',sizeof(*root));
 
-<<<<<<< HEAD
-	newDirNode->type=Ndir;
-	//newDirNode->data->blk_num=-1;
-	newDirNode->data=NULL;
-	strncpy(newDirNode->name,a,sizeof(a));
-||||||| merged common ancestors
-  newDirNode->type=Ndir;
-  //newDirNode->data->blk_num=-1;
-  newDirNode->data=NULL;
-  strncpy(newDirNode->name,a,sizeof(a));
-=======
+
   newDirNode->type=Ndir;
   //newDirNode->data->blk_num=-1;
   newDirNode->access_time = time(NULL);
 
   newDirNode->data=NULL;
   strncpy(newDirNode->name,a,sizeof(a));
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 
 	memset(spiltstr,'\0',100);
 	memcpy(spiltstr,path,strlen(path));
@@ -923,23 +781,6 @@ static int rmfs_mknod(const char *path, mode_t mode, dev_t rdev)
 		return -ENOSPC;
 	}
 
-<<<<<<< HEAD
-	newDirNode = malloc(sizeof(*root));
-	if ( newDirNode == NULL ) {
-		perror("malloc");
-		return errno;
-	}
-	malloc_counter+=sizeof(*root);
-	memset(newDirNode,'\0',sizeof(*root));
-||||||| merged common ancestors
-  newDirNode = malloc(sizeof(*root));
-  if ( newDirNode == NULL ) {
-    perror("malloc");
-    return errno;
-  }
-  malloc_counter+=sizeof(*root);
-  memset(newDirNode,'\0',sizeof(*root));
-=======
   newDirNode = malloc(sizeof(*root));
   if ( newDirNode == NULL ) {
     perror("malloc");
@@ -947,7 +788,6 @@ static int rmfs_mknod(const char *path, mode_t mode, dev_t rdev)
   }
 //malloc_counter+=sizeof(*root);
   memset(newDirNode,'\0',sizeof(*root));
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 
 	newDirNode->type=Nfile;
 	//newDirNode->data->blk_num=-1;
@@ -1046,23 +886,6 @@ static int rmfs_create(const char *path, mode_t t,struct fuse_file_info *fi)
   }
 	 */
 
-<<<<<<< HEAD
-	newDirNode = malloc(sizeof(*root));
-	if ( newDirNode == NULL ) {
-		perror("malloc");
-		return errno;
-	}
-	malloc_counter+=sizeof(*root);
-	memset(newDirNode,'\0',sizeof(*root));
-||||||| merged common ancestors
-  newDirNode = malloc(sizeof(*root));
-  if ( newDirNode == NULL ) {
-    perror("malloc");
-    return errno;
-  }
-  malloc_counter+=sizeof(*root);
-  memset(newDirNode,'\0',sizeof(*root));
-=======
   newDirNode = malloc(sizeof(*root));
   if ( newDirNode == NULL ) {
     perror("malloc");
@@ -1070,26 +893,13 @@ static int rmfs_create(const char *path, mode_t t,struct fuse_file_info *fi)
   }
   //malloc_counter+=sizeof(*root);
   memset(newDirNode,'\0',sizeof(*root));
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 
-<<<<<<< HEAD
-	newDirNode->type=Nfile;
-	//newDirNode->data->blk_num=-1;
-	newDirNode->data=NULL;
-	strncpy(newDirNode->name,a,sizeof(a));
-||||||| merged common ancestors
-  newDirNode->type=Nfile;
-  //newDirNode->data->blk_num=-1;
-  newDirNode->data=NULL;
-  strncpy(newDirNode->name,a,sizeof(a));
-=======
   newDirNode->type=Nfile;
   //newDirNode->data->blk_num=-1;
   newDirNode->data=NULL;
   newDirNode->access_time = time(NULL);
 
   strncpy(newDirNode->name,a,sizeof(a));
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 
 	memset(spiltstr,'\0',100);
 	memcpy(spiltstr,path,strlen(path));
@@ -1280,23 +1090,11 @@ static int rmfs_truncate(const char *path, off_t size)
 	if(dirNode->data==NULL)
 		return 0;
 
-<<<<<<< HEAD
-	malloc_counter-=dirNode->len;
-	freeBlock(dirNode->data);
-	dirNode->data=NULL;
-	//memset(dirNode->data,'\0',strlen(dirNode->data));
-||||||| merged common ancestors
-    malloc_counter-=dirNode->len;
-    freeBlock(dirNode->data);
-    dirNode->data=NULL;
-    //memset(dirNode->data,'\0',strlen(dirNode->data));
-=======
 //malloc_counter-=dirNode->len;
     freeBlock(dirNode->data);
     dirNode->access_time = time(NULL);
 	dirNode->data=NULL;
     //memset(dirNode->data,'\0',strlen(dirNode->data));
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 	return 0;
 }
 
@@ -1329,19 +1127,11 @@ static int rmfs_utimens(const char* path, const struct timespec ts[2])
 static int rmfs_write(const char *path, const char *buf, size_t size,
 		off_t offset, struct fuse_file_info *fi)
 {
-<<<<<<< HEAD
-	printf("\n\nIn rmfs_write!!!!!!!!!!!\n\n");
-	Node dirNode=root;
-||||||| merged common ancestors
-	
-  Node dirNode=root;
-=======
 	
   Node dirNode=root;
   pthread_t thread;
   int ret;
 
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 
 	char lpath[100];
 	memset(lpath,'\0',100);
@@ -1378,31 +1168,6 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 	int buff_size=size,tmp_offset=offset;
 	Block prev_blk=NULL;
 
-<<<<<<< HEAD
-	printf(" Before the actual writing \n" );
-	int fblk,charcpy=0;
-	if(dirNode->data==NULL)
-	{
-		printf(" Inside the data -> NULL and data is <%s>\n",buf );
-		dirNode->data=prev_blk=malloc(sizeof(struct block_t));
-		if(dirNode->data == NULL)
-		{
-			perror("malloc");
-			return errno;
-		}
-||||||| merged common ancestors
-  printf(" Before the actual writing \n" );
-  int fblk,charcpy=0;
-  if(dirNode->data==NULL)
-  {
-    printf(" Inside the data -> NULL and data is <%s>\n",buf );
-    dirNode->data=prev_blk=malloc(sizeof(struct block_t));
-    if(dirNode->data == NULL)
-    {
-      perror("malloc");
-      return errno;
-    }
-=======
   // printf(" Before the actual writing \n" );
   int fblk,charcpy=0;
   if(dirNode->data==NULL)
@@ -1414,75 +1179,7 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
       perror("malloc");
       return errno;
     }
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 
-<<<<<<< HEAD
-		fblk=getFreeBlock();
-		dirNode->data->blk_num=fblk;
-		dirNode->data->nxt_blk=NULL;
-		printf("Wriitn in the block <%d>\n",fblk );
-
-		while(charcpy < size)
-		{
-			int dchar=(buff_size > BLOCK_SIZE?BLOCK_SIZE:buff_size);
-			printf("Before writing in the block tmp_offset <%d> dchar <%d>\n",tmp_offset,dchar );
-
-			strncpy((memory_blocks[fblk] + tmp_offset),(buf+ charcpy),dchar);
-			charcpy+=dchar;
-			buff_size-=BLOCK_SIZE;
-			tmp_offset=0;
-
-			if(charcpy < size)
-			{
-				printf("Shouldn't be here\n");
-				fblk=getFreeBlock();
-				prev_blk->nxt_blk=malloc(sizeof(struct block_t));
-				prev_blk->nxt_blk->blk_num=fblk;
-				prev_blk->nxt_blk->nxt_blk=NULL;
-				if(prev_blk->nxt_blk == NULL)
-				{
-					perror("malloc");
-					return errno;
-				}
-				prev_blk=prev_blk->nxt_blk;
-			}
-||||||| merged common ancestors
-    fblk=getFreeBlock();
-    dirNode->data->blk_num=fblk;
-    dirNode->data->nxt_blk=NULL;
-    printf("Wriitn in the block <%d>\n",fblk );
-
-    while(charcpy < size)
-    {  
-      int dchar=(buff_size > BLOCK_SIZE?BLOCK_SIZE:buff_size);
-      printf("Before writing in the block tmp_offset <%d> dchar <%d>\n",tmp_offset,dchar );
-
-      strncpy((memory_blocks[fblk] + tmp_offset),(buf+ charcpy),dchar);
-      charcpy+=dchar;
-      buff_size-=BLOCK_SIZE;
-      tmp_offset=0;
-      
-      if(charcpy < size)
-      {
-        printf("Shouldn't be here\n");
-        fblk=getFreeBlock();
-        prev_blk->nxt_blk=malloc(sizeof(struct block_t));
-        prev_blk->nxt_blk->blk_num=fblk;
-        prev_blk->nxt_blk->nxt_blk=NULL;
-        if(prev_blk->nxt_blk == NULL)
-        {
-          perror("malloc");
-          return errno;
-        }
-        prev_blk=prev_blk->nxt_blk;
-      } 
-      
-    }
-    printf("Aftet the exist data <%s>\n",memory_blocks[dirNode->data->blk_num]);
-  } 
-  else
-  {
-=======
     fblk=getFreeBlock();
     dirNode->data->blk_num=fblk;
     dirNode->data->nxt_blk=NULL;
@@ -1518,26 +1215,7 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
   } 
   else
   {
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 
-<<<<<<< HEAD
-		}
-		printf("Aftet the exist data <%lu>\n",memory_blocks[dirNode->data->blk_num]);
-	}
-	else
-	{
-||||||| merged common ancestors
-    printf("Inside the appended section offset <%d> size <%d> block number <%d>\n",offset,size ,dirNode->data->blk_num);
-    Block offset_blk=dirNode->data;
-    int offset_loop=1;
-    while(offset > (BLOCK_SIZE * offset_loop))
-    {
-      prev_blk=offset_blk;
-      offset_blk=offset_blk->nxt_blk;
-      printf("Next block is : <%d>\n", offset_blk->blk_num);
-      offset_loop++;
-    }
-=======
     //printf("Inside the appended section offset <%d> size <%d> block number <%d>\n",offset,size ,dirNode->data->blk_num);
     Block offset_blk=dirNode->data;
     int offset_loop=1;
@@ -1548,50 +1226,8 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
       //printf("Next block is : <%d>\n", offset_blk->blk_num);
       offset_loop++;
     }
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 
-<<<<<<< HEAD
-		printf("Inside the appended section offset <%d> size <%d> block number <%d>\n",offset,size ,dirNode->data->blk_num);
-		Block offset_blk=dirNode->data;
-		int offset_loop=1;
-		while(offset > (BLOCK_SIZE * offset_loop))
-		{
-			prev_blk=offset_blk;
-			offset_blk=offset_blk->nxt_blk;
-			printf("Next block is : <%d>\n", offset_blk->blk_num);
-			offset_loop++;
-		}
-||||||| merged common ancestors
-    while(charcpy < size)
-    {  
-      if(offset_blk==NULL)
-      {
-        fblk=getFreeBlock();
-        printf("Shouldn be here <%d>\n",fblk );
-        offset_blk=prev_blk->nxt_blk=malloc(sizeof(struct block_t));
-        if(offset_blk == NULL)
-        {
-          perror("malloc");
-          return errno;
-        }
-        prev_blk->nxt_blk->blk_num=fblk;
-        prev_blk->nxt_blk->nxt_blk=NULL;
-      }
-      int dmove= (tmp_offset+buff_size)>(BLOCK_SIZE*offset_loop)?(BLOCK_SIZE*offset_loop - tmp_offset): buff_size;
-      int recal_offset= tmp_offset - (BLOCK_SIZE*(offset_loop - 1));
 
-      printf("Will bewriting data as dmove <%d> recal_offset <%d> charcpy <%d>\n",dmove,recal_offset,charcpy);
-
-      strncpy(memory_blocks[offset_blk->blk_num] + recal_offset,(buf+ charcpy),dmove);
-      charcpy+=dmove;
-      buff_size-=dmove;
-      tmp_offset=BLOCK_SIZE*offset_loop;
-      offset_loop++;
-      prev_blk=offset_blk;
-      offset_blk=offset_blk->nxt_blk;
-    }
-  }
-=======
     while(charcpy < size)
     {  
       if(offset_blk==NULL)
@@ -1621,7 +1257,6 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
       offset_blk=offset_blk->nxt_blk;
     }
   }
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 
 		while(charcpy < size)
 		{
@@ -1683,17 +1318,6 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 	//printf("dir data :%s\n",dirNode->data);
 	strncpy(dirNode->data + offset,buf, size);
 	//printf(">>>> after dir data :%s\n",dirNode->data);
-
-<<<<<<< HEAD
-	 */
-	dirNode->len=(size+offset) > dirNode->len? (size+offset):dirNode->len;
-	access_cold_blocks(dirNode);
-	return size;
-||||||| merged common ancestors
-  */
-  dirNode->len=(size+offset) > dirNode->len? (size+offset):dirNode->len;
-	return size;
-=======
   */
   dirNode->len=(size+offset) > dirNode->len? (size+offset):dirNode->len;
   dirNode->access_time = time(NULL);
@@ -1707,37 +1331,12 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
    }
   //}		
   return size;
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 }
 
 
 // file rename
 static int rmfs_rename(const char *path,const char *path1)
 {
-<<<<<<< HEAD
-	printf("\n\nIn rmfs_rename!!!!!!!!!!!\n\n");
-	Node dirNode=NULL;
-	char b[FILENAME_SIZE];
-	memset(b,'\0',FILENAME_SIZE);
-	getFileName(path1,b);
-
-	int errChk=directory_lookup(path,&dirNode,0);
-	if(errChk!=0) {
-		return -ENOENT; }
-	strncpy(dirNode->name,b,sizeof(b));
-	return 0;
-||||||| merged common ancestors
-  Node dirNode=NULL;
-  char b[FILENAME_SIZE];
-  memset(b,'\0',FILENAME_SIZE);
-  getFileName(path1,b);
-
-  int errChk=directory_lookup(path,&dirNode,0);
-  if(errChk!=0) { 
-      return -ENOENT; }
-  strncpy(dirNode->name,b,sizeof(b));
-  return 0;
-=======
   Node dirNode=NULL;
   char b[FILENAME_SIZE];
   memset(b,'\0',FILENAME_SIZE);
@@ -1749,7 +1348,6 @@ static int rmfs_rename(const char *path,const char *path1)
   strncpy(dirNode->name,b,sizeof(b));
   dirNode->access_time = time(NULL);
   return 0;
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 }
 
 // This functiona is library defined , used for mapping which above functions to call with corresponding operation
@@ -2187,17 +1785,7 @@ void update_hashtree(char *hash){
 // Restore path :  extra handling to make file system persistent and to restored from with specified directory
 int main(int argc, char *argv[])
 {
-<<<<<<< HEAD
-	int eflag=0,pstr=0,i;
-||||||| merged common ancestors
-  int eflag=0,pstr=0,i;
-  FILE * fp;
-  if(argc < 3 || argc >4)
-  {
-    printf("Usage : ./ramdisk <mount_point> <size in MB> <Restore Filepath> \n");
-    exit(-1);
-  }
-=======
+
   int eflag=0,pstr=0,i;
   FILE * fp;
    
@@ -2207,25 +1795,11 @@ int main(int argc, char *argv[])
     printf("Usage : ./ramdisk <mount_point> <size in MB> <Restore Filepath> \n");
     exit(-1);
   }
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 
-<<<<<<< HEAD
-	FILE * fp;
-||||||| merged common ancestors
-  malloc_limit=atoi(argv[2]);
-  printf("Malloc limit <%d>\n",malloc_limit);
-  // Setting up block allocation for the in-memory file system
-  free_block_count=block_count=(malloc_limit*MB_CONVERT)/BLOCK_SIZE; 
-  memory_blocks = malloc(block_count * sizeof(char*));
-  if ( memory_blocks == NULL ) {
-      perror("malloc");
-      return errno;
-  }
-   printf("after block count malloc  \n");
-  for(i=0;i<block_count; i++)
-  {
-    memory_blocks[i]=malloc(BLOCK_SIZE * sizeof(char));
-=======
+	cli = intialize_drop_box();
+	printf("Cli: %s", cli);
+	block_number = 0;
+
   malloc_limit=atoi(argv[2]);
   printf("Malloc limit <%ld>\n",malloc_limit);
   // Setting up block allocation for the in-memory file system
@@ -2239,28 +1813,14 @@ int main(int argc, char *argv[])
   for(i=0;i<block_count; i++)
   {
     memory_blocks[i]=malloc(BLOCK_SIZE * sizeof(char));
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 
-	//Checking the Number of argument
-	if(argc < 3 || argc >4)
-	{
-		printf("Usage : ./nameofthisfile <mount_point> <size in MB> <Restore Filepath> \n");
-		exit(-1);
-	}
-
-<<<<<<< HEAD
-	cli = intialize_drop_box();
-	printf("Cli: %s", cli);
-	block_number = 0;
-||||||| merged common ancestors
-  printf("before free block count malloc bloc count <%d> \n",block_count);
-  // Initialize the free block structure
-  free_blk=malloc(block_count * sizeof(int));
-  if ( free_blk == NULL ) {
+    if ( memory_blocks[i] == NULL ) {
       perror("malloc");
       return errno;
+    }
+    memset(memory_blocks[i],'\0',BLOCK_SIZE);
   }
-=======
+
   printf("before free block count malloc bloc count <%ld> \n",block_count);
   // Initialize the free block structure
   free_blk=malloc(block_count * sizeof(int));
@@ -2268,69 +1828,45 @@ int main(int argc, char *argv[])
       perror("malloc");
       return errno;
   }
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 
-	//Converting Size argument form string to int
-	malloc_limit=atoi(argv[2]);
+  for(i=0;i<block_count; i++)
+  {
+    free_blk[i]=-1;
+  }  
 
-<<<<<<< HEAD
-	printf("Malloc limit <%d>\n",malloc_limit);
-||||||| merged common ancestors
-  argv[2]="-d";
-=======
   // argv[2]="-d";
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 
-<<<<<<< HEAD
-	//Calculating the total size in bytes required for malloc
-	free_block_count=block_count=(malloc_limit*MB_CONVERT)/BLOCK_SIZE;
-||||||| merged common ancestors
-  if(argc == 4)
-    pstr=1;
-  argc=3;
-  //defining the root element
-=======
   if(argc == 4)
     pstr=1;
   //argc=3;
   argc=2;
   //defining the root element
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 
-	printf("Size of Char Pointer: %d\n", sizeof(char *));
-	printf("Size of Int Pointer: %d\n", sizeof(int *));
-	printf("Size of Char: %d\n", sizeof(char));
-	printf("Size of Int: %d\n", sizeof(int));
+  printf("D1\n");
 
-	// Setting up block allocation for the in-memory file system
-	//memory_blocks points to block_count * 8 byte
-	memory_blocks = malloc(block_count * sizeof(char*));
+  int mlc_chk=ckmalloc(sizeof(*root),&root);
+  if(mlc_chk!=0)
+      return mlc_chk;
 
-	if ( memory_blocks == NULL ) {
-		perror("malloc");
-		return errno;
-	}
-	printf("Size of memory_block (sizeof(char*) - in bytes) %d.  \n", sizeof(memory_blocks));
-	printf("After block count malloc %d.  \n", block_count );
-	//Making every block pointer point to a Block of size Block_Size * size of char
-	for(i=0;i<block_count; i++)
-	{
-		//Each memory block points to 8 * 1 byte
-		memory_blocks[i]=malloc(BLOCK_SIZE * sizeof(char));
+  printf("D2\n");
+  strncpy(root->name,"/",strlen("/"));
+  root->type=Ndir;
+  root->next=root->child=NULL;
+  root->data=NULL;
 
-		if ( memory_blocks[i] == NULL ) {
-			perror("malloc");
-			return errno;
-		}
-		memset(memory_blocks[i],'\0',BLOCK_SIZE);
-	}
+  printf("D3\n");  
+  if(pstr == 1)
+  {    
+   printf("D4\n"); 
+    fp = fopen (argv[3], "a+");
+    if (fp == NULL)
+      exit(EXIT_FAILURE);
+    // call to restore the path
+   // usePersistentFile(&fp);
+    fclose(fp);
+  }
+  //  eflag=makeSamplefile();
 
-<<<<<<< HEAD
-	printf("Before free block count malloc block count <%d> \n",block_count);
-||||||| merged common ancestors
-  printf("before the fuse main \n");
-   eflag=fuse_main(argc, argv, &rmfs_oper, NULL);
-=======
   printf("before the fuse main \n");
   /*multithread to keep track of cold files
 	ret1 = pthread_create ( &thread1, NULL, track_cold_files, NULL);
@@ -2340,88 +1876,7 @@ int main(int argc, char *argv[])
    }	
   */
   eflag=fuse_main(argc, argv, &rmfs_oper, NULL);
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 
-<<<<<<< HEAD
-	// Initialize the free block structure
-	//free_blk points to block_count * 4 bytes
-	free_blk=malloc(block_count * sizeof(int));
-	printf("Size of free_blk (sizeof(int) - in bytes) %d.  \n", sizeof(free_blk));
-	if ( free_blk == NULL ) {
-		perror("malloc");
-		return errno;
-	}
-
-	for(i=0;i<block_count; i++)
-	{
-		free_blk[i]=-1;
-	}
-
-	argv[2]="-d";
-
-	if(argc == 4)
-		pstr=1;
-	argc=3;
-	//defining the root element
-
-	printf("D1\n");
-
-	int mlc_chk=ckmalloc(sizeof(*root),&root);
-	if(mlc_chk!=0)
-		return mlc_chk;
-
-	printf("mlc_chk %d: \n",mlc_chk);
-	strncpy(root->name,"/",strlen("/"));
-	root->type=Ndir;
-	root->next=root->child=NULL;
-	root->data=NULL;
-
-	printf("D3\n");
-	if(pstr == 1)
-	{
-		printf("D4\n");
-		fp = fopen (argv[3], "a+");
-		if (fp == NULL)
-			exit(EXIT_FAILURE);
-		// call to restore the path
-		// usePersistentFile(&fp);
-		fclose(fp);
-	}
-	//  eflag=makeSamplefile();
-
-	printf("before the fuse main \n");
-	eflag=fuse_main(argc, argv, &rmfs_oper, NULL);
-
-	if(pstr == 1)
-	{
-		char prefix[1000]="/";
-		fp = fopen (argv[3], "w+");
-		if (fp == NULL)
-			exit(EXIT_FAILURE);
-
-		// Make FS persistent
-		//  writeToFile(&fp,prefix,root->child);
-
-		fclose(fp);
-	}
-
-	return eflag;
-||||||| merged common ancestors
-  if(pstr == 1)
-  {
-    char prefix[1000]="/";
-    fp = fopen (argv[3], "w+");
-    if (fp == NULL)
-       exit(EXIT_FAILURE);
-
-    // Make FS persistent
-  //  writeToFile(&fp,prefix,root->child);
-   
-    fclose(fp);
-  }
-
-  return eflag;
-=======
 	printf("After fuse main\n");
   if(pstr == 1)
   {
@@ -2438,6 +1893,5 @@ int main(int argc, char *argv[])
   
   //pthread_join(thread, NULL);
   return eflag;
->>>>>>> b639d1db691f36ea0f80ae1553b42c07955df87f
 }
 
