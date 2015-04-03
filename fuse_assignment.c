@@ -27,7 +27,7 @@ Fuse based File system which supports POSIX functionalities.
 #include <openssl/sha.h>
 #include <dropbox.h>
 #include <memStream.h>
-#include <glib.h>
+#include <glib.h> 
 #include "fuse_common.h"
 #include <time.h>
 #include <pthread.h>
@@ -43,27 +43,25 @@ running postmark program. Hence lookup code is repeated in the all the function 
 int *free_blk=NULL;
 
 // defining root node here 
-
 Node root,buffNode;
 char **memory_blocks=NULL;
+// As there is input limit for the memory defining global variables 
 
-// As there is input limit for the memory defining global variables
 long long malloc_counter=0,malloc_limit=0,block_count=0, free_block_count=0;
 
 drbClient *cli;
 int block_number;
-GHashTable* hashtree;
+GHashTable* hashtree; 
 
 int checkStorageThreshold(int percent)
 {
 	return (int)((free_block_count/block_count)*100) > percent ? 1:0;
 }
 
+
 int getFreeBlock()
 {
-	printf("\n\nIn getFreeBlock!!!!!!!!!!!\n\n");
 	int i;
-
 
 	for(i=0;i<block_count;i++)
 	{
@@ -227,13 +225,12 @@ void *track_cold_files() {
 // This function creates heap memory for the Node with specified size
 int ckmalloc(unsigned l,Node *t)
 {
-	printf("\n\nIn ckmalloc!!!!!!!!!!!\n\n");
 	void *p;
 	/*
-  	))
+  if(malloc_limit < (malloc_counter+l))
   {
     return ENOSPC;
-  }
+  }  
 	 */
 	p = malloc(l);
 	if ( p == NULL ) {
@@ -250,7 +247,6 @@ int ckmalloc(unsigned l,Node *t)
 // This function creates heap memory for the array with specified size
 int ckmalloc_w(unsigned l,char **t)
 {
-	printf("\n\nIn ckmalloc_w!!!!!!!!!!!\n\n");
 	void *p;
 
 	if(malloc_limit < (malloc_counter+l))
@@ -271,7 +267,6 @@ int ckmalloc_w(unsigned l,char **t)
 
 void freeBlock(Block blk)
 {
-
 	if(blk==NULL)
 		return;
 	freeBlock(blk->nxt_blk);
@@ -286,9 +281,6 @@ void freeBlock(Block blk)
 // freess memory
 void freemalloc(Node n)
 {
-
-	printf("\n\nIn freemalloc!!!!!!!!!!!\n\n");
-
 	long totalsize=0;
 	if(n->data!=NULL)
 	{
@@ -303,15 +295,14 @@ void freemalloc(Node n)
 //  Lookup function to serach for the particular node by traversing the path from root
 static int directory_lookup(const char *path,Node *t,int mode)
 {
-	printf("\n\nIn directory_lookup!!!!!!!!!!!\n\n");
 	char lpath[100];
 	memset(lpath,'\0',100);
-	memcpy(lpath,path,strlen(path));
+	memcpy(lpath,path,strlen(path));	
 
 	char *token=strtok(lpath, "/");
 	Node temp=root,prev=NULL;
 
-	while( token != NULL)
+	while( token != NULL) 
 	{
 		//printf("inside the loop\n");
 		prev=temp;
@@ -322,8 +313,8 @@ static int directory_lookup(const char *path,Node *t,int mode)
 			if (strcmp(token, temp->name) == 0) {
 				printf("found %s \n",temp->name );
 				break;
-			}
-			temp=temp->next;
+			}      
+			temp=temp->next; 
 		}
 		if(temp==NULL)
 		{
@@ -332,7 +323,7 @@ static int directory_lookup(const char *path,Node *t,int mode)
 		}
 
 		token = strtok(NULL, "/");
-	}
+	}    
 
 	*t=temp;
 	return 0;
@@ -344,12 +335,12 @@ static int delete_node(const char *path,Ntype t)
 //	printf("inside the delete_node %s\n",path);
 	char lpath[100];
 	memset(lpath,'\0',100);
-	memcpy(lpath,path,strlen(path));
+	memcpy(lpath,path,strlen(path));	
 
 	char *token=strtok(lpath, "/");
 	Node temp=root,prev=NULL,sib;
 
-	while( token != NULL)
+	while( token != NULL) 
     {
 	  prev=temp;sib=NULL;
       temp=temp->child;
@@ -359,8 +350,8 @@ static int delete_node(const char *path,Ntype t)
       		printf("found %s \n",temp->name );
       		break;
         }
-        sib=temp;
-      	temp=temp->next;
+        sib=temp;      
+      	temp=temp->next; 
   	  }
       if(temp==NULL)
       {
@@ -392,30 +383,29 @@ static int delete_node(const char *path,Ntype t)
 // This function used for getting attribute information for directory or file
 static int rmfs_getattr(const char *path, struct stat *stbuf)
 {
-	printf("\n\nIn rmfs_getattr!!!!!!!!!!!\n\n");
 	int res = 0;
 	Node temp=root;
 	memset(stbuf, 0, sizeof(struct stat));
 	if (strcmp(path, "/") == 0) {
 		stbuf->st_mode = S_IFDIR | 0755;
 		stbuf->st_nlink = 2;
-	}
-	else {
+	} 
+	else {  
 		char lpath[100];
 		memset(lpath,'\0',100);
-		memcpy(lpath,path,strlen(path));
+		memcpy(lpath,path,strlen(path));  
 
 		char *token=strtok(lpath, "/");
 
-		while( token != NULL)
+		while( token != NULL) 
 		{
 			temp=temp->child;
 			while(temp!=NULL) {
 				if (strcmp(token, temp->name) == 0) {
 					//printf("found %s \n",temp->name );
 					break;
-				}
-				temp=temp->next;
+				}      
+				temp=temp->next; 
 			}
 			if(temp==NULL)
 			{
@@ -423,7 +413,7 @@ static int rmfs_getattr(const char *path, struct stat *stbuf)
 			}
 
 			token = strtok(NULL, "/");
-		}
+		}    
 
 		if(temp!=NULL)
 		{
@@ -435,7 +425,7 @@ static int rmfs_getattr(const char *path, struct stat *stbuf)
 				stbuf->st_size=temp->len;
 			stbuf->st_nlink = 1;
 		}
-		else
+		else 
 			res = -ENOENT;
 	}
 	buffNode=temp;
@@ -447,25 +437,24 @@ static int rmfs_getattr(const char *path, struct stat *stbuf)
 static int rmfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		off_t offset, struct fuse_file_info *fi)
 {
-	printf("\n\nIn rmfs_readdir!!!!!!!!!!!\n\n");
 	(void) offset;
 	(void) fi;
 	char lpath[100];
 	memset(lpath,'\0',100);
-	memcpy(lpath,path,strlen(path));
+	memcpy(lpath,path,strlen(path));  
 
 	char *token=strtok(lpath, "/");
 	Node dirNode=root;
 
-	while( token != NULL)
+	while( token != NULL) 
 	{
 		dirNode=dirNode->child;
 		while(dirNode!=NULL) {
 			if (strcmp(token, dirNode->name) == 0) {
 				//printf("found %s \n",dirNode->name );
 				break;
-			}
-			dirNode=dirNode->next;
+			}      
+			dirNode=dirNode->next; 
 		}
 		if(dirNode==NULL)
 		{
@@ -491,26 +480,25 @@ static int rmfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	return 0;
 }
 
-// before opening a file it calls to check whether file exist hence lookup
+// before opening a file it calls to check whether file exist hence lookup 
 static int rmfs_open(const char *path, struct fuse_file_info *fi)
 {
-	printf("\n\nIn rmfs_open!!!!!!!!!!!\n\n");
 	char lpath[100];
 	memset(lpath,'\0',100);
-	memcpy(lpath,path,strlen(path));
+	memcpy(lpath,path,strlen(path));  
 
 	char *token=strtok(lpath, "/");
 	Node dirNode=root;
 
-	while( token != NULL)
+	while( token != NULL) 
 	{
 		dirNode=dirNode->child;
 		while(dirNode!=NULL) {
 			if (strcmp(token, dirNode->name) == 0) {
 				//printf("found %s \n",dirNode->name );
 				break;
-			}
-			dirNode=dirNode->next;
+			}      
+			dirNode=dirNode->next; 
 		}
 		if(dirNode==NULL)
 		{
@@ -529,25 +517,24 @@ static int rmfs_open(const char *path, struct fuse_file_info *fi)
 static int rmfs_read(const char *path, char *buf, size_t size, off_t offset,
 		struct fuse_file_info *fi)
 {
-	printf("\n\nIn rmfs_read!!!!!!!!!!!\n\n");
 	size_t len;
 	(void) fi;
 	char lpath[100];
 	memset(lpath,'\0',100);
-	memcpy(lpath,path,strlen(path));
+	memcpy(lpath,path,strlen(path));  
 
 	char *token=strtok(lpath, "/");
 	Node dirNode=root;
 
-	while( token != NULL)
+	while( token != NULL) 
 	{
 		dirNode=dirNode->child;
 		while(dirNode!=NULL) {
 			if (strcmp(token, dirNode->name) == 0) {
 				//printf("found %s \n",dirNode->name );
 				break;
-			}
-			dirNode=dirNode->next;
+			}      
+			dirNode=dirNode->next; 
 		}
 		if(dirNode==NULL)
 		{
@@ -566,7 +553,6 @@ static int rmfs_read(const char *path, char *buf, size_t size, off_t offset,
 		return 0;
 
 	len = dirNode->len;
-
 	dirNode->access_time = time(NULL);
 
 	if (offset < len) {  
@@ -587,7 +573,7 @@ static int rmfs_read(const char *path, char *buf, size_t size, off_t offset,
 		int charcpy=0;
 
 		while(charcpy < size)
-		{
+		{  
 
 			int dmove= (tmp_offset+buff_size)>(BLOCK_SIZE*offset_loop)?(BLOCK_SIZE*offset_loop - tmp_offset): buff_size;
 			int recal_offset= tmp_offset - (BLOCK_SIZE*(offset_loop - 1));
@@ -598,7 +584,7 @@ static int rmfs_read(const char *path, char *buf, size_t size, off_t offset,
 			offset_loop++;
 			// prev_blk=offset_blk;
 			offset_blk=offset_blk->nxt_blk;
-		}
+		}	
 
 	} else
 		size = 0;
@@ -611,17 +597,16 @@ static int rmfs_read(const char *path, char *buf, size_t size, off_t offset,
 // get file name from the path string passed
 static void getFileName(const char *path,char lastname[])
 {
-	printf("\n\nIn getFileName!!!!!!!!!!!\n\n");
 	char spiltstr[100];
 	memset(spiltstr,'\0',100);
 	memcpy(spiltstr,path,strlen(path));
 	char *token=strtok(spiltstr, "/");
 	char *lastslsh;
-	while( token != NULL )
+	while( token != NULL ) 
 	{
 		lastslsh=token;
 		token = strtok(NULL, "/");
-	}
+	}	
 	strncpy(lastname,lastslsh,strlen(lastslsh));
 	return;
 }
@@ -640,10 +625,9 @@ static void getLastChild(Node *t)
 }
  */
 
-// Make directory
+// Make directory 
 static int rmfs_mkdir(const char *path, mode_t mode)
 {
-	printf("\n\nIn rmfs_mkdir!!!!!!!!!!!\n\n");
 	Node dirNode=NULL;
 	Node newDirNode=NULL;
 	char a[FILENAME_SIZE];
@@ -653,11 +637,11 @@ static int rmfs_mkdir(const char *path, mode_t mode)
 	memcpy(spiltstr,path,strlen(path));
 	char *token=strtok(spiltstr, "/");
 	char *lastslsh;
-	while( token != NULL )
+	while( token != NULL ) 
 	{
 		lastslsh=token;
 		token = strtok(NULL, "/");
-	}
+	} 
 	strncpy(a,lastslsh,strlen(lastslsh));
 
 	/*
@@ -676,7 +660,6 @@ static int rmfs_mkdir(const char *path, mode_t mode)
 
 	memset(newDirNode,'\0',sizeof(*root));
 
-
 	newDirNode->type=Ndir;
 	//newDirNode->data->blk_num=-1;
 	newDirNode->access_time = time(NULL);
@@ -690,7 +673,7 @@ static int rmfs_mkdir(const char *path, mode_t mode)
 
 	Node temp=root,prev=NULL;
 
-	while( token != NULL)
+	while( token != NULL) 
 	{
 		//printf("inside the loop\n");
 		prev=temp;
@@ -699,20 +682,20 @@ static int rmfs_mkdir(const char *path, mode_t mode)
 			if (strcmp(token, temp->name) == 0) {
 				//printf("found %s \n",temp->name );
 				break;
-			}
-			temp=temp->next;
+			}      
+			temp=temp->next; 
 		}
 		if(temp==NULL)
 		{
 			break;
 		}
 		token = strtok(NULL, "/");
-	}
+	}    
 
 	dirNode=prev;
 
 	if(prev->child !=NULL)
-	{
+	{	
 		prev=prev->child;
 		while(prev->next!=NULL)
 		{
@@ -731,10 +714,9 @@ static int rmfs_mkdir(const char *path, mode_t mode)
 	return 0;
 }
 
-// Optional  but can be useful if making node
+// Optional  but can be useful if making node 
 static int rmfs_mknod(const char *path, mode_t mode, dev_t rdev)
 {
-	printf("\n\nIn rmfs_mknod!!!!!!!!!!!\n\n");
 	Node dirNode=NULL;
 	Node newDirNode=NULL;
 	char a[FILENAME_SIZE];
@@ -744,11 +726,11 @@ static int rmfs_mknod(const char *path, mode_t mode, dev_t rdev)
 	memcpy(spiltstr,path,strlen(path));
 	char *token=strtok(spiltstr, "/");
 	char *lastslsh;
-	while( token != NULL )
+	while( token != NULL ) 
 	{
 		lastslsh=token;
 		token = strtok(NULL, "/");
-	}
+	} 
 	strncpy(a,lastslsh,strlen(lastslsh));
 
 	if(malloc_limit < (malloc_counter+sizeof(*root)))
@@ -775,7 +757,7 @@ static int rmfs_mknod(const char *path, mode_t mode, dev_t rdev)
 
 	Node temp=root,prev=NULL;
 
-	while( token != NULL)
+	while( token != NULL) 
 	{
 		//printf("inside the loop\n");
 		prev=temp;
@@ -784,20 +766,20 @@ static int rmfs_mknod(const char *path, mode_t mode, dev_t rdev)
 			if (strcmp(token, temp->name) == 0) {
 				//printf("found %s \n",temp->name );
 				break;
-			}
-			temp=temp->next;
+			}      
+			temp=temp->next; 
 		}
 		if(temp==NULL)
 		{
 			break;
 		}
 		token = strtok(NULL, "/");
-	}
+	}    
 
 	dirNode=prev;
 
 	if(prev->child !=NULL)
-	{
+	{ 
 		prev=prev->child;
 		while(prev->next!=NULL)
 		{
@@ -818,9 +800,7 @@ static int rmfs_mknod(const char *path, mode_t mode, dev_t rdev)
 
 
 static int rmfs_flush(const char *path, struct fuse_file_info *fi)
-{
-	printf("\n\nIn rmfs_flush!!!!!!!!!!!\n\n");
-	/*
+{ 	/*
 	printf("printing all root childs\n");
 	Node tcp=root;
 	tcp=tcp->child;
@@ -830,14 +810,13 @@ static int rmfs_flush(const char *path, struct fuse_file_info *fi)
 		printf("node -> %s\n",tcp->name );
 		tcp=tcp->next;
 	}
-	 */
+ */
 	return 0;
 }
 
 //create file under specific path
 static int rmfs_create(const char *path, mode_t t,struct fuse_file_info *fi)
-{
-	printf("\n\nIn rmfs_create!!!!!!!!!!!\n\n");
+{ 	
 	Node dirNode=NULL;
 	Node newDirNode=NULL;
 	char a[FILENAME_SIZE];
@@ -847,11 +826,11 @@ static int rmfs_create(const char *path, mode_t t,struct fuse_file_info *fi)
 	memcpy(spiltstr,path,strlen(path));
 	char *token=strtok(spiltstr, "/");
 	char *lastslsh;
-	while( token != NULL )
+	while( token != NULL ) 
 	{
 		lastslsh=token;
 		token = strtok(NULL, "/");
-	}
+	} 
 	strncpy(a,lastslsh,strlen(lastslsh));
 
 	/*
@@ -882,7 +861,7 @@ static int rmfs_create(const char *path, mode_t t,struct fuse_file_info *fi)
 
 	Node temp=root,prev=NULL;
 
-	while( token != NULL)
+	while( token != NULL) 
 	{
 		//printf("inside the loop\n");
 		prev=temp;
@@ -891,20 +870,20 @@ static int rmfs_create(const char *path, mode_t t,struct fuse_file_info *fi)
 			if (strcmp(token, temp->name) == 0) {
 				//printf("found %s \n",temp->name );
 				break;
-			}
-			temp=temp->next;
+			}      
+			temp=temp->next; 
 		}
 		if(temp==NULL)
 		{
 			break;
 		}
 		token = strtok(NULL, "/");
-	}
+	}    
 
 	dirNode=prev;
 
 	if(prev->child !=NULL)
-	{
+	{ 
 		prev=prev->child;
 		while(prev->next!=NULL)
 		{
@@ -923,18 +902,17 @@ static int rmfs_create(const char *path, mode_t t,struct fuse_file_info *fi)
 	return 0;
 }
 
-// Remove the node
+// Remove the node 
 static int rmfs_unlink(const char *path)
 {
-	printf("\n\nIn rmfs_unlink!!!!!!!!!!!\n\n");
 	char lpath[100];
 	memset(lpath,'\0',100);
-	memcpy(lpath,path,strlen(path));
+	memcpy(lpath,path,strlen(path));  
 
 	char *token=strtok(lpath, "/");
 	Node temp=root,prev=NULL,sib;
 
-	while( token != NULL)
+	while( token != NULL) 
 	{
 		prev=temp;sib=NULL;
 		temp=temp->child;
@@ -944,8 +922,8 @@ static int rmfs_unlink(const char *path)
 				printf("found %s \n",temp->name );
 				break;
 			}
-			sib=temp;
-			temp=temp->next;
+			sib=temp;      
+			temp=temp->next; 
 		}
 		if(temp==NULL)
 		{
@@ -970,15 +948,14 @@ static int rmfs_unlink(const char *path)
 // Remove directory
 static int rmfs_rmdir(const char *path)
 {
-	printf("\n\nIn rmfs_rmdir!!!!!!!!!!!\n\n");
 	char lpath[100];
 	memset(lpath,'\0',100);
-	memcpy(lpath,path,strlen(path));
+	memcpy(lpath,path,strlen(path));  
 
 	char *token=strtok(lpath, "/");
 	Node temp=root,prev=NULL,sib;
 
-	while( token != NULL)
+	while( token != NULL) 
 	{
 		prev=temp;sib=NULL;
 		temp=temp->child;
@@ -988,8 +965,8 @@ static int rmfs_rmdir(const char *path)
 				// printf("found %s \n",temp->name );
 				break;
 			}
-			sib=temp;
-			temp=temp->next;
+			sib=temp;      
+			temp=temp->next; 
 		}
 		if(temp==NULL)
 		{
@@ -1019,7 +996,6 @@ static int rmfs_rmdir(const char *path)
 // Checking file/ dir exists
 static int rmfs_access(const char *path, int mask)
 {
-	printf("\n\nIn rmfs_access!!!!!!!!!!!\n\n");
 	Node dirNode=NULL;
 	int errChk=directory_lookup(path,&dirNode,0);
 	if(errChk==-1)
@@ -1031,23 +1007,22 @@ static int rmfs_access(const char *path, int mask)
 //truncate file
 static int rmfs_truncate(const char *path, off_t size)
 {
-	printf("\n\nIn rmfs_truncate!!!!!!!!!!!\n\n");
 	char lpath[100];
 	memset(lpath,'\0',100);
-	memcpy(lpath,path,strlen(path));
+	memcpy(lpath,path,strlen(path));  
 
 	char *token=strtok(lpath, "/");
 	Node dirNode=root;
 
-	while( token != NULL)
+	while( token != NULL) 
 	{
 		dirNode=dirNode->child;
 		while(dirNode!=NULL) {
 			if (strcmp(token, dirNode->name) == 0) {
 				//printf("found %s \n",dirNode->name );
 				break;
-			}
-			dirNode=dirNode->next;
+			}      
+			dirNode=dirNode->next; 
 		}
 		if(dirNode==NULL)
 		{
@@ -1075,25 +1050,21 @@ static int rmfs_truncate(const char *path, off_t size)
 
 static int rmfs_ftruncate(const char *path, off_t size,struct fuse_file_info *fi)
 {
-	printf("\n\nIn rmfs_ftruncate!!!!!!!!!!!\n\n");
 	return 0;
 }
 
 static int rmfs_chmod(const char *path, mode_t t)
 {
-	printf("\n\nIn rmfs_chmod!!!!!!!!!!!\n\n");
 	return 0;
 }
 
 static int rmfs_chown(const char *path,uid_t uid, gid_t gid)
 {
-	printf("\n\nIn rmfs_chown!!!!!!!!!!!\n\n");
 	return 0;
 }
 
 static int rmfs_utimens(const char* path, const struct timespec ts[2])
 {
-	printf("\n\nIn rmfs_utilmens!!!!!!!!!!!\n\n");
 	return 0;
 }
 
@@ -1110,19 +1081,19 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 
 	char lpath[100];
 	memset(lpath,'\0',100);
-	memcpy(lpath,path,strlen(path));
+	memcpy(lpath,path,strlen(path));  
 
 	char *token=strtok(lpath, "/");
 
-	while( token != NULL)
+	while( token != NULL) 
 	{
 		dirNode=dirNode->child;
 		while(dirNode!=NULL) {
 			if (strcmp(token, dirNode->name) == 0) {
-				printf("found %s \n",dirNode->name );
+				//printf("found %s \n",dirNode->name );
 				break;
-			}
-			dirNode=dirNode->next;
+			}      
+			dirNode=dirNode->next; 
 		}
 		if(dirNode==NULL)
 		{
@@ -1154,8 +1125,8 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 			perror("malloc");
 			return errno;
 		}
-	
-			fblk=getFreeBlock();
+
+		fblk=getFreeBlock();
 		dirNode->data->blk_num=fblk;
 		dirNode->data->nxt_blk=NULL;
 		// printf("Wriitn in the block <%d>\n",fblk );
@@ -1202,7 +1173,6 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 			offset_loop++;
 		}
 
-
 		while(charcpy < size)
 		{  
 			if(offset_blk==NULL)
@@ -1233,7 +1203,7 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 		}
 	}
 
-/*
+	/*
   if(dirNode->data!=NULL)
     	len=dirNode->len;
   int mlc_chk=0;
@@ -1258,28 +1228,30 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 			dirNode->data[newSize]='\0';
       dirNode->len=newSize+1;
       malloc_counter+=(newSize-len+1);
-		}
+		}		
 	}
 	//printf("dir data :%s\n",dirNode->data);
 	strncpy(dirNode->data + offset,buf, size);
 	//printf(">>>> after dir data :%s\n",dirNode->data);
- */
-dirNode->len=(size+offset) > dirNode->len? (size+offset):dirNode->len;
-dirNode->access_time = time(NULL);
 
-//if(checkStorageThreshold(80)) {
-/*multithread to keep track of cold files*/
-ret = pthread_create ( &thread, NULL, track_cold_files, NULL);
-if(ret) {
-	printf("Pthread create failed\n");
-	exit(1);
+	 */
+	dirNode->len=(size+offset) > dirNode->len? (size+offset):dirNode->len;
+	dirNode->access_time = time(NULL);
+	write_access_cold_blocks(dirNode); 
+
+	//if(checkStorageThreshold(80)) {
+	/*multithread to keep track of cold files*/
+	ret = pthread_create ( &thread, NULL, track_cold_files, NULL);
+	if(ret) {
+		printf("Pthread create failed\n");
+		exit(1);
+	}
+	//}		
+	return size;
 }
-//}		
-return size;
-}
 
 
-// file rename
+// file rename 
 static int rmfs_rename(const char *path,const char *path1)
 {
 	Node dirNode=NULL;
@@ -1374,7 +1346,7 @@ int  makeSamplefile()
     return 0;
 }
 
-// To make FS persistent , during the umount creates serialize file for the metadata information and data stored inside the file
+// To make FS persistent , during the umount creates serialize file for the metadata information and data stored inside the file 
 // in the output directory specified at command line
 void writeToFile(FILE **p,char pre[FULLPATHNAME],Node t)
 {
@@ -1414,7 +1386,7 @@ void writeToFile(FILE **p,char pre[FULLPATHNAME],Node t)
 void usePersistentFile(FILE **fp)
 {
 
-  while (1)
+  while (1) 
   {
     ssize_t read;
     char * line = NULL;
@@ -1431,9 +1403,9 @@ void usePersistentFile(FILE **fp)
     //printf("Retrieved line of length %zu :\n", read);
     //printf("%s", line);
     long numr;
-    char *token=strtok(line, "|");
+    char *token=strtok(line, "|");           
     int isfile=atoi(token);
-    //printf(" isfile :%d\n",isfile );
+    //printf(" isfile :%d\n",isfile );     
     token = strtok(NULL, "|");
     //printf("filename <%s>\n",token);
     if(isfile ==0)
@@ -1477,14 +1449,17 @@ void usePersistentFile(FILE **fp)
   }
 }
 
+ */
+
 /************************Dropbox API code*********************/
+int download_dropbox_file(char *, char *, char *);
 drbClient * intialize_drop_box(){
 
-	char *c_key    = "nac4mj3ipd9h5bg";  //< consumer key
-	char *c_secret = "64dlaxmqqjopk5v";  //< consumer secret
+	char *c_key    = "e9kwa4b6lnxk0r5";  //< consumer key
+	char *c_secret = "sr8lt6xj5izjtol";  //< consumer secret
 	//char *t_key    = "KSkQCyhUYNIAAAAAAAAACdaOg1cDsSD4GBI_Q_I7ajkC5zhzBCZnk00rtMrfmhbf"; //< access token key
-	char *t_key = "sv2k61xascyyn1uo";
-	char *t_secret = "y0grw5pz2q1bxls";  //< access token secret
+	char *t_key = "2vrs94p0v2evy90a";
+	char *t_secret = "b33n459lg42bzom";  //< access token secret
 	drbInit();
 	drbClient* cli_local = drbCreateClient(c_key, c_secret, t_key, t_secret);
 	connect_to_dropbox(cli_local, t_key, t_secret);
@@ -1510,6 +1485,19 @@ void move_to_dropbox_cold_storage(char * fileName){
 	upload_dropbox_file(path, fileName, DRBFilePath);
 }
 
+void fetch_from_dropbox_cold_storage(char * fileName){
+
+	char DRBFilePath[255];
+	char path[255];
+
+	strcpy(path,"./");
+	strcat(path, fileName);
+	strcpy(DRBFilePath, "/");
+	strcat(DRBFilePath, fileName);
+
+	download_dropbox_file(path, fileName, DRBFilePath);
+}
+
 void upload_dropbox_file(char *localFilePath, char *fileName, char *DRBFilePath){
 
 	int err;
@@ -1525,7 +1513,7 @@ void upload_dropbox_file(char *localFilePath, char *fileName, char *DRBFilePath)
 	remove(localFilePath);
 }
 
-Bool download_dropbox_file(char *localFilePath, char *fileName, char *DRBFilePath){
+int download_dropbox_file(char *localFilePath, char *fileName, char *DRBFilePath){
 
 	int err;
 	FILE *file = fopen(localFilePath, "w"); // Write it in this file
@@ -1577,7 +1565,20 @@ void print_cold_blocks(Block);
 drbClient * intialize_drop_box();
 gboolean hashtree_contains(char *);
 /************************Code for Accessing Blocks**************/
-void access_cold_blocks(Node cold_file){
+/*void check_all_hashes(Node cold_file){
+	Block temp = cold_file->data;
+
+	char *current_hash;
+
+	while(temp != NULL)
+	{
+		current_hash = temp->server_block_hash;
+		printf("\n\nHash under consideration: %s\n\n",current_hash);
+		temp = temp->nxt_blk;
+	}
+}*/
+/************************Code for Accessing Blocks**************/
+void write_access_cold_blocks(Node cold_file){
 
 	Block temp = cold_file->data;
 	char *hash;
@@ -1610,6 +1611,7 @@ void access_cold_blocks(Node cold_file){
 	}
 	/**********Move this to calling function*********************/
 	upload_dropbox_file("./dropbox_hashtree.txt", "dropbox_hashtree.txt", "/dropbox_hashtree.txt");
+	//check_all_hashes(cold_file); 
 }
 
 void print_cold_blocks(Block temp){
@@ -1716,21 +1718,66 @@ void update_hashtree(char *hash){
 
 /***********************READ FROM COLD STORAGE***************/
 /***********************Code for Using client Side Hashtree of Blocks(File -> hashofBlocks)***************/
-/***********************Code for Getting Server Side Hashtree (hashOfBlock -> BlockNames***************/
+/***********************Code for Getting Server Side Hashtree (hashOfBlock -> BlockNames: Already Implemented Above)***************/
 /***********************Code for Identifying Block Files to be copied from Server***************/
 /***********************Code for Writing Block File data to blocks on client***************/
+void read_block_from_file(char * file_name){
+
+	FILE *fp;
+	char temp_path[80];
+	char *string = malloc(BLOCK_SIZE + 1);
+
+	strcpy(temp_path, "./");
+	strcat(temp_path, file_name);
+
+	fp=fopen(temp_path, "r");
+	fread(string, BLOCK_SIZE, 1, fp);
+
+	fclose(fp);
+	printf("Fetched String: %s",string);
+	//long fblk = getFreeBlock();
+	//temp -> blk_num =fblk;
+	//strncpy(memory_blocks[fblk], string, strlen(string));
+}
+
+void read_access_cold_blocks(Node cold_file){
+
+	Block temp = cold_file->data;
+	char *hash;
+
+	/**********Move this to calling function*********************/
+	activate_hashtree();
+
+	while(temp != NULL)
+	{
+		hash = temp->server_block_hash;
+
+		if(hashtree_contains(hash)){
+			fetch_from_dropbox_cold_storage(hash);
+			read_block_from_file(hash);
+		}else
+		{
+			printf("Block not found on Server.\n");
+		}
+
+		temp->server_block_hash = hash;
+		temp->inmemory_flag = True;
+
+		//print_cold_blocks(temp);
+		temp = temp->nxt_blk;
+	}
+	/**********Move this to calling function*********************/
+	remove("./dropbox_hashtree.txt");
+}
 /***********************Code for for Updating client Side Hashtree of Blocks(File -> hashofBlocks)***************/
 
 
-
-
 // Main function takes arguments as mentioned ..
-// Mount point -  where FS should be mounted
+// Mount point -  where FS should be mounted 
 // Size :  size of fs as whole
 // Restore path :  extra handling to make file system persistent and to restored from with specified directory
 int main(int argc, char *argv[])
 {
-
 	int eflag=0,pstr=0,i;
 	FILE * fp;
 
@@ -1741,9 +1788,9 @@ int main(int argc, char *argv[])
 		exit(-1);
 	}
 
-	cli = intialize_drop_box();
-	printf("Cli: %s", cli);
-	block_number = 0;
+	cli = intialize_drop_box(); 
+	printf("Cli: %s", cli); 
+	block_number = 0;  
 
 	malloc_limit=atoi(argv[2]);
 	printf("Malloc limit <%ld>\n",malloc_limit);
@@ -1839,4 +1886,5 @@ int main(int argc, char *argv[])
 	//pthread_join(thread, NULL);
 	return eflag;
 }
+
 
