@@ -34,6 +34,9 @@ Fuse based File system which supports POSIX functionalities.
 #include <unistd.h>
 #include "storage.h"
 
+//Temp flag
+int temp_flag = 0;
+
 /*
 Initially all the function were to make sure reusability is maintain, but method switching cost is verfied after
 running postmark program. Hence lookup code is repeated in the all the function to make it faster.
@@ -199,7 +202,7 @@ void *track_cold_files() {
 	Node node_to_transfer = NULL;
 
 	printf("One Thread getting called\n");
-	sleep(120);
+	sleep(20);
 	//List_item *acclist_head = NULL;
 	printf("Thread getting called\n");
 
@@ -212,13 +215,14 @@ void *track_cold_files() {
 	printf("\nSorted Printing  done\n");
 
 	/*Code to transfer Files*/	
-	/*while ((checkStorageThreshold(40)) && (acclist_head != NULL)) {   //Until the storage utilization drops to 40% continue giving noDe
+	/*while ((checkStorageThreshold(40)) && */ 
+	while(acclist_head != NULL) {   //Until the storage utilization drops to 40% continue giving noDe
 	  node_to_transfer = get_inode(&acclist_head);
-	  access_cold_blocks(node_to_transfer);	
+	  write_access_cold_blocks(node_to_transfer);	
 	}
-	if((acclist == NULL) && (checkStorageThreshold(40))) {
+	if((acclist_head == NULL) && (checkStorageThreshold(40))) {
 	 printf("Storage full but access list empty\n");
-	}*/
+	}
 	pthread_exit(NULL);
 }
 
@@ -1237,16 +1241,18 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 	 */
 	dirNode->len=(size+offset) > dirNode->len? (size+offset):dirNode->len;
 	dirNode->access_time = time(NULL);
-	write_access_cold_blocks(dirNode); 
+	//write_access_cold_blocks(dirNode); 
 
 	//if(checkStorageThreshold(80)) {
 	/*multithread to keep track of cold files*/
-	ret = pthread_create ( &thread, NULL, track_cold_files, NULL);
-	if(ret) {
+	if(temp_flag == 0) {
+	  temp_flag = 1;
+	  ret = pthread_create ( &thread, NULL, track_cold_files, NULL);
+	  if(ret) {
 		printf("Pthread create failed\n");
 		exit(1);
-	}
-	//}		
+	  }
+	}		
 	return size;
 }
 
@@ -1687,13 +1693,16 @@ gboolean hashtree_contains(char *hash){
 void write_block_to_file(Block cold_block, char * file_name){
 
 	FILE *fp;
-	char temp_path[80];
+	int file_write_result;
 
+	char temp_path[80];
+        memset(temp_path,'\0',80);
 	strcpy(temp_path, "./");
 	strcat(temp_path, file_name);
 
 	fp=fopen(temp_path, "w");
-	fprintf(fp, memory_blocks[cold_block->blk_num]);
+	file_write_result = fprintf(fp,"%s", memory_blocks[cold_block->blk_num]);
+	printf("File Write Result : %d", file_write_result);
 
 	fclose(fp);
 }
@@ -1826,12 +1835,12 @@ int main(int argc, char *argv[])
 		free_blk[i]=-1;
 	}  
 
-	// argv[2]="-d";
+	argv[2]="-d";
 
 	if(argc == 4)
 		pstr=1;
-	//argc=3;
-	argc=2;
+	argc=3;
+	//argc=2;
 	//defining the root element
 
 	printf("D1\n");
