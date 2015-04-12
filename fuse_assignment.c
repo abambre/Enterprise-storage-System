@@ -1605,9 +1605,9 @@ void write_access_cold_blocks(Node cold_file){
 			printf("Block Already on Server.\n");
 		}
 
-		//free_blk[temp->blk_num] = -1;
-		//memset(memory_blocks[temp->blk_num], '\0',BLOCK_SIZE);
-		//free_block_count--;
+		free_blk[temp->blk_num] = -1;
+		memset(memory_blocks[temp->blk_num], '\0',BLOCK_SIZE);
+		free_block_count--;
 
 		temp->server_block_hash = hash;
 		temp->inmemory_flag = False;
