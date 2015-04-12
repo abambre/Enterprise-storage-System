@@ -26,6 +26,7 @@ struct node_t {
   Block data;
   int len;
   time_t access_time;
+  Bool inmemory_node_flag;
 };
 
 typedef struct node_t *Node;

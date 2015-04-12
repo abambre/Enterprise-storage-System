@@ -1,0 +1,32 @@
+ional track found the concept of Higher Order functions, closures, currying seemed absolutely alien, inspite of having a few years of Object Oriented programming experience, maybe there was a lack of lambda calculus experience. As discussed above it was difficult to relate these concepts with humanly social experience (inheritance etc.). The best approach adopted by both the programmers was to lead by example approach to understand the nuances of this paradigm.
+
+### Major difference based on experience
+- The functional code has a higher expressibility, it is not scattered or encapsulated behind braces to hide implementations. Even though thinking in functional way may be difficult but reading a functional program is easier.
+
+- Higher Order Functions makes a lot of sense. Given the fact that most of the software Engineers have a mathematical background, it is easier to understand the concept of higher order functions. It not only embraces the code reusability, removes unnecessary loops, keeps code concise but also gives a chance to put high school mathematics into use.
+
+- Map, Reduce, Filter, Curry, Compose functions allow programmers spend a lot less time building and operating on data structures and worrying about memory use. Something that Object Oriented programmers are missing by large.
+
+- The code implementation is concise and can be easily tested. There is a lot less dependency on different part of the code like in case of Object Oriented Programming where any changes in parent class can break subclasses.
+
+- However it was also realized that thinking in terms of Object Oriented is way much easier and intuitive than Functional Programming. In many instances code was first written in imperative way and then converted to functional.
+
+- Features such as encapsulation, abstraction are easier to achieve (at least for us) in Object Oriented way then the functional way.
+
+###Some other major differences based on popular opinion
+- The code is more concise in functional programming due to elimination of overheads like iterator variables whereas Object Oriented programming results in a large overhead due to the presence of state variables.
+- Concurrency is easier to achieve in functional programming since the compiler takes care of most of the operations and state variables are not required.
+- Object Oriented programming gives us more control over the code flow whereas functional programming enables us to declare the intent clearly, without being mixed up with control flow statements.
+- Functional programming is static and nonrepetitive, hence its structure is helpful in understanding it without mentally executing it. Understanding Object Oriented programming requires thorough analysis of the control flow statements.
+- Functional programs are typically faster compared to Object Oriented programs. However, they tend to generate comparatively larger amounts of short-lived garbage than Object Oriented languages.
+- Modularity makes code easier to maintain in Object Oriented programming, and Encapsulation enables us to hide implementation details in Object Oriented programming.
+
+### Where to use which paradigm?
+
+Object-oriented languages are good when we have a fixed set of operations on things, and as our code evolves, we primarily add new things. This can be accomplished by adding new classes which implement existing methods, and the existing classes are left alone.
+
+Functional languages are good when we have a fixed set of things, and as our code evolves, we primarily add new operations on existing things. This can be accomplished by adding new functions which compute with existing data types, and the existing functions are left alone. It is also generally preferred over object oriented programming when manipulating symbolic data in tree form. The best example of a situation to use FP is while developing compilers.
+
+## Conclusion
+
+From what we observed we can safely conclude that every programming paradigm consists of certain principal features that makes solving particular set of problems much easier/optimal. Thinking in terms 

@@ -556,6 +556,9 @@ static int rmfs_read(const char *path, char *buf, size_t size, off_t offset,
 	if(dirNode->data==NULL)
 		return 0;
 
+	if(dirNode->inmemory_node_flag == False)
+		read_access_cold_blocks(dirNode);
+
 	len = dirNode->len;
 	dirNode->access_time = time(NULL);
 
@@ -1161,6 +1164,7 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 			} 
 
 		}
+		dirNode->inmemory_node_flag = True;
 		//printf("Aftet the exist data <%s>\n",memory_blocks[dirNode->data->blk_num]);
 	} 
 	else
@@ -1615,6 +1619,7 @@ void write_access_cold_blocks(Node cold_file){
 		//print_cold_blocks(temp);
 		temp = temp->nxt_blk;
 	}
+	cold_file->inmemory_node_flag=False;
 	/**********Move this to calling function*********************/
 	upload_dropbox_file("./dropbox_hashtree.txt", "dropbox_hashtree.txt", "/dropbox_hashtree.txt");
 	//check_all_hashes(cold_file); 
@@ -1730,7 +1735,7 @@ void update_hashtree(char *hash){
 /***********************Code for Getting Server Side Hashtree (hashOfBlock -> BlockNames: Already Implemented Above)***************/
 /***********************Code for Identifying Block Files to be copied from Server***************/
 /***********************Code for Writing Block File data to blocks on client***************/
-void read_block_from_file(char * file_name){
+void read_block_from_file(char * file_name, Block temp){
 
 	FILE *fp;
 	char temp_path[80];
@@ -1744,9 +1749,9 @@ void read_block_from_file(char * file_name){
 
 	fclose(fp);
 	printf("Fetched String: %s",string);
-	//long fblk = getFreeBlock();
-	//temp -> blk_num =fblk;
-	//strncpy(memory_blocks[fblk], string, strlen(string));
+	long fblk = getFreeBlock();
+	temp -> blk_num =fblk;
+	strncpy(memory_blocks[fblk], string, strlen(string));
 }
 
 void read_access_cold_blocks(Node cold_file){
@@ -1763,7 +1768,7 @@ void read_access_cold_blocks(Node cold_file){
 
 		if(hashtree_contains(hash)){
 			fetch_from_dropbox_cold_storage(hash);
-			read_block_from_file(hash);
+			read_block_from_file(hash, temp);
 		}else
 		{
 			printf("Block not found on Server.\n");
@@ -1776,6 +1781,7 @@ void read_access_cold_blocks(Node cold_file){
 		temp = temp->nxt_blk;
 	}
 	/**********Move this to calling function*********************/
+	cold_file->inmemory_node_flag = True;
 	remove("./dropbox_hashtree.txt");
 }
 /***********************Code for for Updating client Side Hashtree of Blocks(File -> hashofBlocks)***************/

@@ -1,0 +1,31 @@
+of a Universal programming paradigm would not be wise, because it is not always that a paradigm that works optimally in one particular situation will also work optimally in other situations.
+
+Many programmers even advocate the use of a hybrid approach to leverage the advantage of both the paradigms. However, we feel that there will always be some tradeoff involved. And, the chances of messing up the things will increase exponentially.
+
+From a purely syntactic point of view, functional programs are smaller (more consise) and easier to keep straight in heads. Nevertheless, we also agree that this style of coding isn't universal; there are some things that Object Oriented is better at than Functional Programming.
+
+## Future Work
+
+- Support for nested tags and custom tags.
+- Stable support hyperlink and image tags.
+- Support different flavors of Markdown. Eg: GFM(Github Flavored Markdown).
+
+##Other works in this area
+
+- https://github.com/jjyr/minidown
+- https://github.com/gettalong/kramdown
+- http://codepen.io/branneman/details/nbyrK/
+- http://shamansir.github.io/blog/articles/generating-functional-parsers/
+- http://code.google.com/p/pagedown/
+
+##References
+- http://c2.com/cgi/wiki?OoVsFunctional
+- http://www.srirangan.net/2011-12-functional-programming-in-javascript
+- http://functionaljavascript.blogspot.com/2013/07/monads.html
+- https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions#special-word-boundary
+- http://stackoverflow.com/questions/2373524/how-do-i-display-values-of-an-json-object
+- http://www.ctrlshift.net/project/markdowneditor/
+- http://scott.sauyet.com/Javascript/Talk/FunctionalProgramming/
+
+
+
