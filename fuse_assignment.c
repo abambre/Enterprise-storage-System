@@ -36,7 +36,7 @@ Fuse based File system which supports POSIX functionalities.
 
 //Temp flag
 int temp_flag = 0;
-
+int thread_flag = 0;
 /*
 Initially all the function were to make sure reusability is maintain, but method switching cost is verfied after
 running postmark program. Hence lookup code is repeated in the all the function to make it faster.
@@ -59,7 +59,7 @@ GHashTable* hashtree;
 int checkStorageThreshold(int percent)
 {
 	int ret = 0;
-	ret = ((float)((float)(free_block_count-block_count)/(float)block_count)*100) > percent ? 1:0;
+	ret = ((float)((float)(block_count-free_block_count)/(float)block_count)*100) > percent ? 1:0;
 	printf("Percent is %d, Used Blocks is %ld, Block count is %ld and CheckColdStorage ret is %d\n", percent, free_block_count-block_count, block_count, ret);
 	return ret;
 }
@@ -74,7 +74,7 @@ int getFreeBlock()
 		if(free_blk[i]==-1)
 		{
 			free_blk[i]=0;
-			free_block_count++;
+			free_block_count--;
 			return i;
 		}  
 	}
@@ -232,6 +232,7 @@ void *track_cold_files() {
 	 printf("Storage full but access list empty - No more files to transfer\n");
 	}*/
 	printf("Exiting thread\n");
+	thread_flag = 0;
 	pthread_exit(NULL);
 }
 
@@ -284,11 +285,9 @@ void freeBlock(Block blk)
 		return;
 	freeBlock(blk->nxt_blk);
 	free_blk[blk->blk_num]=-1;
-	/****Changes***********************************************/
-	free_blk[blk->inmemory_flag]=True;
 	memset(memory_blocks[blk->blk_num],'\0',BLOCK_SIZE);
 	free(blk);
-	free_block_count--;
+	free_block_count++;
 }
 
 // freess memory
@@ -1093,7 +1092,7 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 	Node dirNode=root;
 	pthread_t thread;
 	int ret;
-
+	
 
 	char lpath[100];
 	memset(lpath,'\0',100);
@@ -1141,9 +1140,12 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 			perror("malloc");
 			return errno;
 		}
-
+		/****Making Node Level Inmemory Flag True***********************************************/
+		dirNode->inmemory_node_flag = True;
 		fblk=getFreeBlock();
 		dirNode->data->blk_num=fblk;
+		/****Making Block Level Inmemory Flag True***********************************************/
+		dirNode->data->inmemory_flag=True;
 		dirNode->data->nxt_blk=NULL;
 		// printf("Wriitn in the block <%d>\n",fblk );
 
@@ -1163,6 +1165,8 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 				fblk=getFreeBlock();
 				prev_blk->nxt_blk=malloc(sizeof(struct block_t));
 				prev_blk->nxt_blk->blk_num=fblk;
+				/****Making Block Level Inmemory Flag True***********************************************/
+				prev_blk->nxt_blk->inmemory_flag=True;
 				prev_blk->nxt_blk->nxt_blk=NULL;
 				if(prev_blk->nxt_blk == NULL)
 				{
@@ -1173,7 +1177,7 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 			} 
 
 		}
-		dirNode->inmemory_node_flag = True;
+
 		//printf("Aftet the exist data <%s>\n",memory_blocks[dirNode->data->blk_num]);
 	} 
 	else
@@ -1256,8 +1260,9 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 	dirNode->access_time = time(NULL);
 	//write_access_cold_blocks(dirNode); 
 
-	if(checkStorageThreshold(2)) {
+	if((checkStorageThreshold(2)) && (thread_flag == 0)) {
 	/*multithread to keep track of cold files*/
+	  thread_flag = 1;	
 	  ret = pthread_create ( &thread, NULL, track_cold_files, NULL);
 	  if(ret) {
 		printf("Pthread create failed\n");
@@ -1615,7 +1620,7 @@ void write_access_cold_blocks(Node cold_file){
 
 		free_blk[temp->blk_num] = -1;
 		memset(memory_blocks[temp->blk_num], '\0',BLOCK_SIZE);
-		free_block_count--;
+		free_block_count++;
 
 		temp->server_block_hash = hash;
 		temp->inmemory_flag = False;
