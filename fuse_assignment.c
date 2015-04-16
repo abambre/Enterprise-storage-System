@@ -58,7 +58,10 @@ GHashTable* hashtree;
 
 int checkStorageThreshold(int percent)
 {
-	return (int)((free_block_count/block_count)*100) > percent ? 1:0;
+	int ret = 0;
+	ret = ((float)((float)(free_block_count-block_count)/(float)block_count)*100) > percent ? 1:0;
+	printf("Percent is %d, Used Blocks is %ld, Block count is %ld and CheckColdStorage ret is %d\n", percent, free_block_count-block_count, block_count, ret);
+	return ret;
 }
 
 
@@ -219,16 +222,16 @@ void *track_cold_files() {
 	activate_hashtree();
 
 	/*Code to transfer Files*/	
-	/*while ((checkStorageThreshold(40)) && */ 
-	while(acclist_head != NULL) {   //Until the storage utilization drops to 40% continue giving noDe
+	while((acclist_head != NULL) && (checkStorageThreshold(1))) {   //Until the storage utilization drops to 40% continue giving noDe
 	  node_to_transfer = get_inode(&acclist_head);
 	  write_access_cold_blocks(node_to_transfer);	
 	}
 	/**********Move this to calling function*********************/
 	upload_dropbox_file("./dropbox_hashtree.txt", "dropbox_hashtree.txt", "/dropbox_hashtree.txt");
-	if((acclist_head == NULL) && (checkStorageThreshold(40))) {
-	 printf("Storage full but access list empty\n");
-	}
+	/*if((acclist_head == NULL) && (checkStorageThreshold(1))) {
+	 printf("Storage full but access list empty - No more files to transfer\n");
+	}*/
+	printf("Exiting thread\n");
 	pthread_exit(NULL);
 }
 
@@ -1253,10 +1256,8 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 	dirNode->access_time = time(NULL);
 	//write_access_cold_blocks(dirNode); 
 
-	//if(checkStorageThreshold(80)) {
+	if(checkStorageThreshold(2)) {
 	/*multithread to keep track of cold files*/
-	if(temp_flag == 0) {
-	  temp_flag = 1;
 	  ret = pthread_create ( &thread, NULL, track_cold_files, NULL);
 	  if(ret) {
 		printf("Pthread create failed\n");
@@ -1885,13 +1886,6 @@ int main(int argc, char *argv[])
 	//  eflag=makeSamplefile();
 
 	printf("before the fuse main \n");
-	/*multithread to keep track of cold files
-	ret1 = pthread_create ( &thread1, NULL, track_cold_files, NULL);
-	if(ret1) {
-		printf(stderr, "Pthread create failed\n");
-		exit(1);
-   }	
-	 */
 	eflag=fuse_main(argc, argv, &rmfs_oper, NULL);
 
 	printf("After fuse main\n");
