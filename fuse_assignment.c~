@@ -189,8 +189,10 @@ int populate_access_list() {
 				insert_back(temp, &fs_head);
 			}
 			else if(temp->type == Nfile) {
-				insert_back(temp, &acclist_head);
-				count++;	
+				if(temp->inmemory_node_flag == True) {
+					insert_back(temp, &acclist_head);
+					count++;	
+				}
 			}
 			temp = temp->next;
 		}
@@ -867,6 +869,8 @@ static int rmfs_create(const char *path, mode_t t,struct fuse_file_info *fi)
 	//newDirNode->data->blk_num=-1;
 	newDirNode->data=NULL;
 	newDirNode->access_time = time(NULL);
+	/****Making Node Level Inmemory Flag True***********************************************/
+	newDirNode->inmemory_node_flag = True;
 
 	strncpy(newDirNode->name,a,sizeof(a));
 
@@ -1126,6 +1130,9 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 	else if(buf==NULL)
 		return 0;
 
+	if(dirNode->inmemory_node_flag == False)
+		read_access_cold_blocks(dirNode);
+
 	int buff_size=size,tmp_offset=offset;
 	Block prev_blk=NULL;
 
@@ -1140,8 +1147,6 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 			perror("malloc");
 			return errno;
 		}
-		/****Making Node Level Inmemory Flag True***********************************************/
-		dirNode->inmemory_node_flag = True;
 		fblk=getFreeBlock();
 		dirNode->data->blk_num=fblk;
 		/****Making Block Level Inmemory Flag True***********************************************/

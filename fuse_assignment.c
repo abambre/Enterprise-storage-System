@@ -60,7 +60,7 @@ int checkStorageThreshold(int percent)
 {
 	int ret = 0;
 	ret = ((float)((float)(block_count-free_block_count)/(float)block_count)*100) > percent ? 1:0;
-	printf("Percent is %d, Used Blocks is %ld, Block count is %ld and CheckColdStorage ret is %d\n", percent, free_block_count-block_count, block_count, ret);
+	printf("Percent is %d, Used Blocks is %ld, Block count is %ld and CheckColdStorage ret is %d\n", percent, block_count-free_block_count, block_count, ret);
 	return ret;
 }
 
@@ -869,6 +869,8 @@ static int rmfs_create(const char *path, mode_t t,struct fuse_file_info *fi)
 	//newDirNode->data->blk_num=-1;
 	newDirNode->data=NULL;
 	newDirNode->access_time = time(NULL);
+	/****Making Node Level Inmemory Flag True***********************************************/
+	newDirNode->inmemory_node_flag = True;
 
 	strncpy(newDirNode->name,a,sizeof(a));
 
@@ -1128,6 +1130,9 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 	else if(buf==NULL)
 		return 0;
 
+	if(dirNode->inmemory_node_flag == False)
+		read_access_cold_blocks(dirNode);
+
 	int buff_size=size,tmp_offset=offset;
 	Block prev_blk=NULL;
 
@@ -1142,8 +1147,6 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 			perror("malloc");
 			return errno;
 		}
-		/****Making Node Level Inmemory Flag True***********************************************/
-		dirNode->inmemory_node_flag = True;
 		fblk=getFreeBlock();
 		dirNode->data->blk_num=fblk;
 		/****Making Block Level Inmemory Flag True***********************************************/
