@@ -189,8 +189,10 @@ int populate_access_list() {
 				insert_back(temp, &fs_head);
 			}
 			else if(temp->type == Nfile) {
-				insert_back(temp, &acclist_head);
-				count++;	
+				if(temp->inmemory_node_flag == True) {
+					insert_back(temp, &acclist_head);
+					count++;	
+				}
 			}
 			temp = temp->next;
 		}
