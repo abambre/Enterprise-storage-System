@@ -17,6 +17,8 @@ Fuse based File system which supports POSIX functionalities.
 #define FULLPATHNAME 1000 
 #define BLOCK_SIZE 4096
 #define MB_CONVERT 1024*1024
+#define HIGH_THRESHOLD 2
+#define LOW_THRESHOLD 1
 
 #include <fuse.h>
 #include <stdio.h>
@@ -112,7 +114,7 @@ void insert_back(Node inode, List_item **head) {
 	return;
 }
 
-/* Remove from front of List - Least accessed File/Cold File specified by head*/
+/*Remove from front of List - Least accessed File/Cold File specified by head*/
 Node get_inode(List_item **head) {
 	if(head == NULL) return NULL;
 	Node ret;
@@ -156,9 +158,47 @@ List_item *sort_list(List_item *lroot) {
 	return least;
 }
 
-void print_access_list() {
+/*Sort the list according to Size*/
+List_item *sort_list_size(List_item *lroot) {
+	int size;
+	List_item *curr = NULL, *highest = NULL, *highest_prev = NULL, *prev = NULL;
+	List_item *tmp = NULL;
+
+	if ( (lroot == NULL) || (lroot->next == NULL) ) 
+		return lroot;
+
+	curr = highest = highest_prev = prev = lroot;
+	while(curr != NULL) {
+		size = curr->inode->len - highest->inode->len;
+		if (size > 0) { 
+			highest_prev = prev;
+			highest = curr;
+		}
+		else if(size == 0) {
+			if(curr->inode->access_time < highest->inode->access_time) {
+				highest_prev = prev;
+				highest = curr;
+			}
+ 		}
+		prev = curr;
+		curr = curr->next;		
+	}	
+
+	if(highest != lroot) {
+		highest_prev->next = lroot;
+		tmp = lroot->next;
+		lroot->next = highest->next;
+		highest->next = tmp;	
+	}
+
+	highest->next = sort_list_size(highest->next);
+	return highest;
+}
+
+
+void print_list(List_item *list) {
 	List_item *temp = NULL;
-	if (acclist_head == NULL) {
+	if (list == NULL) {
 		printf("List head empty\n");
 		return;
 	}
@@ -166,8 +206,7 @@ void print_access_list() {
 		printf("List is empty\n");
 		return;
 	}*/
-	temp = acclist_head;
-	printf("Printing File access list\n");
+	temp = list;
 	while(temp != NULL) {
 		printf("%s:%ld->",temp->inode->name, temp->inode->access_time);
 		temp = temp->next;
@@ -201,33 +240,64 @@ int populate_access_list() {
 	return count;	
 }
 
+long calc_blcks_transfer(int low_thresh) {
+	long num_blks_for_lowthresh = 0;
+	long blks_to_transfer = 0;
+	num_blks_for_lowthresh = (low_thresh * block_count) / 100 ;
+	blks_to_transfer = (block_count-free_block_count) - num_blks_for_lowthresh;
+	return blks_to_transfer;
+}
+
+int calc_file_blks(int file_len) {
+	return ((file_len + (BLOCK_SIZE-1)) / BLOCK_SIZE);
+}
+
+void prepare_nodelist_to_transfer() {
+	long num_blks_to_transfer = 0;
+	long num_file_blks = 0;
+	Node node_considered = NULL;
+
+	num_blks_to_transfer = calc_blcks_transfer(LOW_THRESHOLD);
+	//printf("\n########## Number Of blocks to transfer = %ld\n", num_blks_to_transfer);	
+	while(num_blks_to_transfer) {
+		node_considered = get_inode(&acclist_head);
+		num_file_blks = calc_file_blks(node_considered->len);
+		//printf("####Len of %s is %d and num_blocks is %ld\n", node_considered->name, node_considered->len,num_file_blks);
+		insert_back(node_considered, &transfer_list);	
+		num_blks_to_transfer = num_blks_to_transfer - num_file_blks;
+		//printf("Number of blks remaining to be transferred is %ld\n", num_blks_to_transfer);
+	}
+	//printf("\n Transfer List before sorting is :\n");
+	print_list(transfer_list);
+	transfer_list = sort_list_size(transfer_list);
+}
+
 /*-----------------Track cold Files---------------*/
 
 void *track_cold_files() {
 	
 	int num_files;
 	Node node_to_transfer = NULL;
-
 	printf("One Thread getting called\n");
-	sleep(2);
-	//List_item *acclist_head = NULL;
-	printf("Thread getting called\n");
-
+	sleep(1);
 	num_files = populate_access_list();
-	print_access_list();	
-	printf("\nDone printing\n");
-	acclist_head = sort_list(acclist_head);
-	printf("\nSorting done\n");
-	print_access_list();	
-	printf("\nSorted Printing  done\n");
 
+
+	acclist_head = sort_list(acclist_head);
+	printf("\n***Printing Sorted Access List***\n");
+	print_list(acclist_head);	
+	
+	/****************** New Changes******************/
+	prepare_nodelist_to_transfer();	
+	printf("\n****Printing Access List based on Size***\n");
+	print_list(transfer_list);	
 
 	/**********Move this to calling function*********************/
 	activate_hashtree();
 
 	/*Code to transfer Files*/	
-	while((acclist_head != NULL) && (checkStorageThreshold(1))) {   //Until the storage utilization drops to 40% continue giving noDe
-	  node_to_transfer = get_inode(&acclist_head);
+	while((transfer_list != NULL) && (checkStorageThreshold(LOW_THRESHOLD))) {   //Until the storage utilization drops to 40% continue giving noDe
+	  node_to_transfer = get_inode(&transfer_list);
 	  write_access_cold_blocks(node_to_transfer);	
 	}
 	/**********Move this to calling function*********************/
@@ -1110,7 +1180,7 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 	memset(lpath,'\0',100);
 	memcpy(lpath,path,strlen(path));  
 
-	printf("$$$$$$$$$$$$ Write Path:<%s>\n Contents: <%s>\n", lpath,buf);
+	//printf("$$$$$$$$$$$$ Write Path:<%s>\n Contents: <%s>\n", lpath,buf);
 	char *token=strtok(lpath, "/");
 
 	while( token != NULL) 
@@ -1558,7 +1628,7 @@ int download_dropbox_file(char *localFilePath, char *fileName, char *DRBFilePath
 	int err;
 	FILE *file = fopen(localFilePath, "w"); // Write it in this file
 	void* output = NULL;
-	printf("Downloading File %s...\n", fileName);
+	printf("\nDownloading File %s...\n", fileName);
 	err = drbGetFile(cli, &output,
 			DRBOPT_PATH, DRBFilePath,
 			DRBOPT_IO_DATA, file,

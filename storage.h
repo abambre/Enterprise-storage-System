@@ -40,6 +40,7 @@ typedef struct List_item {
 }List_item ;
 
 List_item *acclist_head = NULL;
+List_item *transfer_list = NULL;
 //List_item *fs_head = NULL;
 
 #endif
