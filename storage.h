@@ -27,6 +27,7 @@ struct node_t {
   int len;
   time_t access_time;
   Bool inmemory_node_flag;
+  pthread_mutex_t lock;
 };
 
 typedef struct node_t *Node;

@@ -37,6 +37,7 @@ Fuse based File system which supports POSIX functionalities.
 //Temp flag
 int temp_flag = 0;
 int thread_flag = 0;
+time_t latest_file_access_time;
 /*
 Initially all the function were to make sure reusability is maintain, but method switching cost is verfied after
 running postmark program. Hence lookup code is repeated in the all the function to make it faster.
@@ -203,11 +204,12 @@ int populate_access_list() {
 /*-----------------Track cold Files---------------*/
 
 void *track_cold_files() {
+	
 	int num_files;
 	Node node_to_transfer = NULL;
 
 	printf("One Thread getting called\n");
-	sleep(20);
+	sleep(2);
 	//List_item *acclist_head = NULL;
 	printf("Thread getting called\n");
 
@@ -338,7 +340,8 @@ static int directory_lookup(const char *path,Node *t,int mode)
 
 		token = strtok(NULL, "/");
 	}    
-
+	pthread_mutex_lock(&(temp->lock));
+	pthread_mutex_unlock(&(temp->lock));
 	*t=temp;
 	return 0;
 }
@@ -444,6 +447,7 @@ static int rmfs_getattr(const char *path, struct stat *stbuf)
 	}
 	buffNode=temp;
 	//printf("<<<<<<< %lld  , %lld>>>>>>>\n",malloc_counter,malloc_limit );
+printf(" >>>>>>>>>>>>Used Blocks is %ld, Block count is %ld and CheckColdStorage \n", block_count-free_block_count, block_count);
 	return res;
 }
 
@@ -565,6 +569,9 @@ static int rmfs_read(const char *path, char *buf, size_t size, off_t offset,
 
 	if(dirNode->data==NULL)
 		return 0;
+
+	pthread_mutex_lock(&(dirNode->lock));
+	pthread_mutex_unlock(&(dirNode->lock));
 
 	if(dirNode->inmemory_node_flag == False)
 		read_access_cold_blocks(dirNode);
@@ -1050,6 +1057,7 @@ static int rmfs_truncate(const char *path, off_t size)
 		token = strtok(NULL, "/");
 	}
 
+
 	if(dirNode==NULL)
 		return -ENOENT;
 
@@ -1102,6 +1110,7 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 	memset(lpath,'\0',100);
 	memcpy(lpath,path,strlen(path));  
 
+	printf("$$$$$$$$$$$$ Write Path:<%s>\n Contents: <%s>\n", lpath,buf);
 	char *token=strtok(lpath, "/");
 
 	while( token != NULL) 
@@ -1129,6 +1138,9 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 		return -EISDIR;
 	else if(buf==NULL)
 		return 0;
+
+	pthread_mutex_lock(&(dirNode->lock));
+	pthread_mutex_unlock(&(dirNode->lock));
 
 	if(dirNode->inmemory_node_flag == False)
 		read_access_cold_blocks(dirNode);
@@ -1268,6 +1280,7 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 	if((checkStorageThreshold(2)) && (thread_flag == 0)) {
 	/*multithread to keep track of cold files*/
 	  thread_flag = 1;	
+		latest_file_access_time = time(NULL);
 	  ret = pthread_create ( &thread, NULL, track_cold_files, NULL);
 	  if(ret) {
 		printf("Pthread create failed\n");
@@ -1612,29 +1625,47 @@ void write_access_cold_blocks(Node cold_file){
 
 	while(temp != NULL)
 	{
-		hash = hash_calc(temp);
+		if(difftime(latest_file_access_time,cold_file->access_time) > 0){
+			hash = hash_calc(temp);
 
-		if(!hashtree_contains(hash)){
-			write_block_to_file(temp,hash);
-			move_to_dropbox_cold_storage(hash);
-			update_hashtree(hash);
-		}else
-		{
-			printf("Block Already on Server.\n");
+			if(!hashtree_contains(hash)){
+				write_block_to_file(temp,hash);
+				move_to_dropbox_cold_storage(hash);
+				update_hashtree(hash);
+			}else
+			{
+				printf("Block Already on Server.\n");
+			}
+
+			temp->server_block_hash = hash;
+			temp->inmemory_flag = False;
+
+			//print_cold_blocks(temp);
+			temp = temp->nxt_blk;
 		}
+		else{
+			printf("Cold File %s accessed just now! Breaking File Transfer. Cold File Access Time: %ld, Benchmark Time: %ld\n",cold_file->name,cold_file->access_time,latest_file_access_time);
+			return;
+		}
+	}
 
+	// Freeing all the transfered blocks for host storage.
+	pthread_mutex_lock(&(cold_file->lock));
+	temp = cold_file->data;
+
+	while(temp != NULL){
+		printf("Freeing Block\n");
+		sleep(1);
 		free_blk[temp->blk_num] = -1;
 		memset(memory_blocks[temp->blk_num], '\0',BLOCK_SIZE);
 		free_block_count++;
 
-		temp->server_block_hash = hash;
-		temp->inmemory_flag = False;
-
-		//print_cold_blocks(temp);
 		temp = temp->nxt_blk;
 	}
+
 	cold_file->inmemory_node_flag=False;
 	
+	pthread_mutex_unlock(&(cold_file->lock));	
 	//check_all_hashes(cold_file); 
 }
 
@@ -1763,14 +1794,11 @@ void read_block_from_file(char * file_name, Block temp){
 	fread(string, BLOCK_SIZE, 1, fp);
 
 	fclose(fp);
-	printf("Fetched String: %s",string);
+	//printf("Fetched String: %s",string);
 
 	long fblk = getFreeBlock();
 	temp -> blk_num =fblk;
 	strncpy(memory_blocks[fblk], string, strlen(string));
-
-	temp->server_block_hash = NULL;
-	temp->inmemory_flag = True;
 
 	remove(file_name);
 }
@@ -1779,9 +1807,13 @@ void read_access_cold_blocks(Node cold_file){
 
 	Block temp = cold_file->data;
 	char *hash;
+	int hashtree_activated = 0;
 
 	/**********Move this to calling function*********************/
-	activate_hashtree();
+	if(thread_flag != 1){
+		activate_hashtree();
+		hashtree_activated = 1;
+	}
 
 	while(temp != NULL)
 	{
@@ -1795,7 +1827,7 @@ void read_access_cold_blocks(Node cold_file){
 			printf("Block not found on Server.\n");
 		}
 
-		temp->server_block_hash = hash;
+		temp->server_block_hash = NULL;
 		temp->inmemory_flag = True;
 
 		//print_cold_blocks(temp);
@@ -1803,7 +1835,9 @@ void read_access_cold_blocks(Node cold_file){
 	}
 	/**********Move this to calling function*********************/
 	cold_file->inmemory_node_flag = True;
-	remove("./dropbox_hashtree.txt");
+	if(hashtree_activated == 1){
+		remove("./dropbox_hashtree.txt");
+	}
 }
 /***********************Code for for Updating client Side Hashtree of Blocks(File -> hashofBlocks)***************/
 
