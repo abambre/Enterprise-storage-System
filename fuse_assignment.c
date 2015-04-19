@@ -41,6 +41,8 @@ Fuse based File system which supports POSIX functionalities.
 int temp_flag = 0;
 int thread_flag = 0;
 time_t latest_file_access_time;
+pthread_mutex_t count_lock;
+
 /*
 Initially all the function were to make sure reusability is maintain, but method switching cost is verfied after
 running postmark program. Hence lookup code is repeated in the all the function to make it faster.
@@ -79,7 +81,9 @@ int getFreeBlock()
 		if(free_blk[i]==-1)
 		{
 			free_blk[i]=0;
+			pthread_mutex_lock(&count_lock);
 			free_block_count--;
+			pthread_mutex_unlock(&count_lock);
 			return i;
 		}  
 	}
@@ -486,7 +490,9 @@ void freeBlock(Block blk)
 	free_blk[blk->blk_num]=-1;
 	memset(memory_blocks[blk->blk_num],'\0',BLOCK_SIZE);
 	free(blk);
+	pthread_mutex_lock(&count_lock);
 	free_block_count++;
+	pthread_mutex_unlock(&count_lock);
 }
 
 // freess memory
@@ -1877,8 +1883,9 @@ void write_access_cold_blocks(Node cold_file){
 		sleep(1);
 		free_blk[temp->blk_num] = -1;
 		memset(memory_blocks[temp->blk_num], '\0',BLOCK_SIZE);
+		pthread_mutex_lock(&count_lock);
 		free_block_count++;
-
+		pthread_mutex_unlock(&count_lock);
 		temp = temp->nxt_blk;
 	}
 
@@ -2076,7 +2083,14 @@ int main(int argc, char *argv[])
 		printf("Usage : ./ramdisk <mount_point> <size in MB> <Restore Filepath> \n");
 		exit(-1);
 	}
-
+	//Initialize the global lock
+	if (pthread_mutex_init(&count_lock, NULL) != 0)
+    {
+        printf("\n mutex init failed\n");
+        return 1;
+    }
+	
+	
 	cli = intialize_drop_box(); 
 	printf("Cli: %s", cli); 
 	block_number = 0;  
@@ -2164,7 +2178,7 @@ int main(int argc, char *argv[])
 
 		fclose(fp);
 	}
-
+	pthread_mutex_destroy(&count_lock);
 	//pthread_join(thread, NULL);
 	return eflag;
 }
