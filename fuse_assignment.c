@@ -513,6 +513,7 @@ void freeBlock(Block blk)
 	free_blk[blk->blk_num]=-1;
 	memset(memory_blocks[blk->blk_num],'\0',BLOCK_SIZE);
 	free(blk);
+	blk=NULL;
 	pthread_mutex_lock(&count_lock);
 	free_block_count++;
 	pthread_mutex_unlock(&count_lock);
@@ -529,6 +530,7 @@ void freemalloc(Node n)
 	}
 	totalsize+=sizeof(*root);
 	free(n);
+	n=NULL;
 	//malloc_counter-=totalsize;
 }
 
@@ -1210,7 +1212,7 @@ static int rmfs_unlink(const char *path)
 	}
 
 	freemalloc(temp);
-
+	temp=NULL;
 
     if((checkMinStorageThreshold(MIN_STORAGE_THRESHOLD)) && (thread_flag == 0))
     {
@@ -1271,6 +1273,7 @@ static int rmfs_rmdir(const char *path)
 	}
 
 	freemalloc(temp);
+	temp=NULL;
 
 	if((checkMinStorageThreshold(MIN_STORAGE_THRESHOLD)) && (thread_flag == 0))
     {
