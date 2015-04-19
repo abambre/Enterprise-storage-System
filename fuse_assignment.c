@@ -12,14 +12,7 @@ Fuse based File system which supports POSIX functionalities.
   gcc -Wall rmfs.c `pkg-config fuse --cflags --libs` -o rmfs
  */
 
-#define FUSE_USE_VERSION 26
-#define FILENAME_SIZE 30
-#define FULLPATHNAME 1000 
-#define BLOCK_SIZE 4096
-#define MB_CONVERT 1024*1024
-#define MAX_STORAGE_THRESHOLD 70
-#define OPTIMAL_STORAGE_THRESHOLD 50
-#define MIN_STORAGE_THRESHOLD 30
+
 #include <fuse.h>
 #include <stdio.h>
 #include <string.h>
