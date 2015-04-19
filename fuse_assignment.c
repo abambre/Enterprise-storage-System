@@ -19,7 +19,8 @@ Fuse based File system which supports POSIX functionalities.
 #define MB_CONVERT 1024*1024
 #define HIGH_THRESHOLD 2
 #define LOW_THRESHOLD 1
-
+#define MIN_STORAGE_THRESHOLD 3	
+#define MAX_STORAGE_THRESHOLD 5
 #include <fuse.h>
 #include <stdio.h>
 #include <string.h>
@@ -63,6 +64,7 @@ int checkStorageThreshold(int percent)
 {
 	int ret = 0;
 	ret = ((float)((float)(block_count-free_block_count)/(float)block_count)*100) > percent ? 1:0;
+	printf("Inside the checkStorageThreshold <%f> \n",(((float)(block_count-free_block_count)/(float)block_count)*100));
 	printf("Percent is %d, Used Blocks is %ld, Block count is %ld and CheckColdStorage ret is %d\n", percent, block_count-free_block_count, block_count, ret);
 	return ret;
 }
@@ -82,7 +84,8 @@ int getFreeBlock()
 		}  
 	}
 
-	return -1;
+    printf(" running out of memory \n");
+	exit(1);
 }
 
 /*function to insert a Node to the back of the list specified with head*/
@@ -311,6 +314,127 @@ void *track_cold_files() {
 	pthread_exit(NULL);
 }
 
+/*----------------Get cold files ------------------------*/
+
+int checkMinStorageThreshold(int percent)
+{
+	int ret = 0;	 
+	ret = ((float)((float)(block_count-free_block_count)/(float)block_count)*100) < percent ? 1:0;
+	printf("Inside the checkMinStorageThreshold <%f> \n",(((float)(block_count-free_block_count)/(float)block_count)*100));
+	printf("Percent is %d, Used Blocks is %ld, Block count is %ld and CheckColdStorage ret is %d\n", percent, block_count-free_block_count, block_count, ret);
+	return ret;
+}
+
+
+int populate_retrieval_list() {
+	Node temp = root;
+	List_item *fs_head = NULL;
+	int count = 0;
+
+	if ((root->child == NULL) && (root->next == NULL)) return 0;
+	insert_back(root, &fs_head);
+
+	while(fs_head != NULL) {
+		temp = get_inode(&fs_head);
+		temp = temp->child;
+		while (temp != NULL) {
+			if(temp->type == Ndir) {
+				insert_back(temp, &fs_head);
+			}
+			else if(temp->type == Nfile) {
+				if(temp->inmemory_node_flag == False) {
+					insert_back(temp, &rtvlist_head);
+					count++;	
+				}
+			}
+			temp = temp->next;
+		}
+	}	
+	return count;	
+}
+
+void print_retrieval_list() {
+	List_item *temp = NULL;
+	if (rtvlist_head == NULL) {
+		printf("List head empty\n");
+		return;
+	}
+	/*if (*rtvlist_head == NULL) {
+		printf("List is empty\n");
+		return;
+	}*/
+	temp = rtvlist_head;
+	printf("Printing File retrieval list\n");
+	while(temp != NULL) {
+		printf("%s:%ld->",temp->inode->name, temp->inode->access_time);
+		temp = temp->next;
+	}
+}
+
+List_item *sort_rlist(List_item *lroot) {
+	double seconds;
+	List_item *curr = NULL, *latest = NULL, *latest_prev = NULL, *prev = NULL;
+	List_item *tmp = NULL;
+
+	if ( (lroot == NULL) || (lroot->next == NULL) ) 
+		return lroot;
+
+	curr = latest = latest_prev = prev = lroot;
+	while(curr != NULL) {
+		seconds = difftime(curr->inode->access_time,latest->inode->access_time);
+		if (seconds > 0) {  // printf("Date1 > Date2\n");
+			//if (curr->inode->retrieval_time < latest->inode->retrieval_time) {
+			latest_prev = prev;
+			latest = curr;
+		}
+		prev = curr;
+		curr = curr->next;		
+	}	
+
+	if(latest != lroot) {
+		latest_prev->next = lroot;
+		tmp = lroot->next;
+		lroot->next = latest->next;
+		latest->next = tmp;	
+	}
+
+	latest->next = sort_rlist(latest->next);
+	return latest;
+}
+
+void *get_cold_files() {
+
+	int num_files;
+	Node node_to_retrive = NULL;
+
+	printf("get cold files thread getting called\n");
+	//sleep(2);
+	//List_item *rtvlist_head = NULL;
+
+	num_files = populate_retrieval_list();
+	print_retrieval_list();	
+	printf("\nDone printing\n");
+	rtvlist_head = sort_rlist(rtvlist_head);
+	printf("\nSorting done\n");
+	print_retrieval_list();	
+	printf("\nSorted Printing  done\n");
+
+	/*Code to retrive Files*/	
+	while((rtvlist_head != NULL) && (checkMinStorageThreshold(MIN_STORAGE_THRESHOLD))) {   //Until the storage utilization drops to 40% continue giving noDe
+	  node_to_retrive = get_inode(&rtvlist_head);
+	  read_access_cold_blocks(node_to_retrive);	
+	}
+	/**********Move this to calling function*********************/
+	//upload_dropbox_file("./dropbox_hashtree.txt", "dropbox_hashtree.txt", "/dropbox_hashtree.txt");
+	/*if((rtvlist_head == NULL) && (checkStorageThreshold(1))) {
+	 printf("Storage full but retrieval list empty - No more files to retrive\n");
+	}*/
+	printf("Exiting thread\n");
+	thread_flag = 0;
+	pthread_exit(NULL);
+}
+
+
 // This function creates heap memory for the Node with specified size
 int ckmalloc(unsigned l,Node *t)
 {
@@ -512,13 +636,15 @@ static int rmfs_getattr(const char *path, struct stat *stbuf)
 			else if(temp->data !=NULL)
 				stbuf->st_size=temp->len;
 			stbuf->st_nlink = 1;
+			stbuf->st_atime=temp->access_time;
+			stbuf->st_mtime=temp->access_time;
 		}
 		else 
 			res = -ENOENT;
 	}
 	buffNode=temp;
 	//printf("<<<<<<< %lld  , %lld>>>>>>>\n",malloc_counter,malloc_limit );
-printf(" >>>>>>>>>>>>Used Blocks is %ld, Block count is %ld and CheckColdStorage \n", block_count-free_block_count, block_count);
+    printf(" >>>>>>>>>>>>Used Blocks is %ld, Block count is %ld and CheckColdStorage \n", block_count-free_block_count, block_count);
 	return res;
 }
 
@@ -610,6 +736,7 @@ static int rmfs_read(const char *path, char *buf, size_t size, off_t offset,
 	(void) fi;
 	char lpath[100];
 	memset(lpath,'\0',100);
+	pthread_t thread;
 	memcpy(lpath,path,strlen(path));  
 
 	char *token=strtok(lpath, "/");
@@ -684,6 +811,16 @@ static int rmfs_read(const char *path, char *buf, size_t size, off_t offset,
 	} else
 		size = 0;
 
+
+    if((checkMinStorageThreshold(MIN_STORAGE_THRESHOLD)) && (thread_flag == 0))
+    {
+	  thread_flag = 1;	
+	  int ret = pthread_create ( &thread, NULL, get_cold_files, NULL);
+	  if(ret) {
+		printf("Pthread create failed\n");
+		exit(1);
+	  }
+    }
 	//printf("in the read buf : <%s> and size <%d>\n", buf,size);
 	return size;
 }
@@ -1348,11 +1485,20 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 	dirNode->access_time = time(NULL);
 	//write_access_cold_blocks(dirNode); 
 
-	if((checkStorageThreshold(2)) && (thread_flag == 0)) {
+	if((checkStorageThreshold(MAX_STORAGE_THRESHOLD)) && (thread_flag == 0)) {
 	/*multithread to keep track of cold files*/
 	  thread_flag = 1;	
 		latest_file_access_time = time(NULL);
 	  ret = pthread_create ( &thread, NULL, track_cold_files, NULL);
+	  if(ret) {
+		printf("Pthread create failed\n");
+		exit(1);
+	  }
+	}
+	else if((checkMinStorageThreshold(MIN_STORAGE_THRESHOLD)) && (thread_flag == 0))
+	{
+	  thread_flag = 1;	
+	  ret = pthread_create ( &thread, NULL, get_cold_files, NULL);
 	  if(ret) {
 		printf("Pthread create failed\n");
 		exit(1);
