@@ -424,7 +424,7 @@ void *get_cold_files() {
 
 	int num_files;
 	Node node_to_retrive = NULL;
-
+    List_item *temp = NULL; 
 	printf("get cold files thread getting called\n");
 	//sleep(2);
 	//List_item *rtvlist_head = NULL;
@@ -447,6 +447,15 @@ void *get_cold_files() {
 	/*if((rtvlist_head == NULL) && (checkStorageThreshold(1))) {
 	 printf("Storage full but retrieval list empty - No more files to retrive\n");
 	}*/
+
+	printf("Freeing memory\n");
+	while(rtvlist_head != NULL) {
+		temp = rtvlist_head;
+		acclist_head = rtvlist_head->next;
+		free(temp);
+	}
+	temp = NULL;
+
 	printf("Exiting thread\n");
 	thread_flag = 0;
 	pthread_exit(NULL);
@@ -649,10 +658,10 @@ static int rmfs_getattr(const char *path, struct stat *stbuf)
 
 		if(temp!=NULL)
 		{
-			stbuf->st_mode = S_IFREG | 0777;
+			stbuf->st_mode = S_IFREG | 0666;
 			stbuf->st_size = 0;
 			if(temp->type==Ndir)
-				stbuf->st_mode = S_IFDIR | 0777;
+				stbuf->st_mode = S_IFDIR | 0666;
 			else if(temp->data !=NULL)
 				stbuf->st_size=temp->len;
 			stbuf->st_nlink = 1;
@@ -846,15 +855,6 @@ static int rmfs_read(const char *path, char *buf, size_t size, off_t offset,
 	}
 
 
-    if((checkMinStorageThreshold(MIN_STORAGE_THRESHOLD)) && (thread_flag == 0))
-    {
-	  thread_flag = 1;	
-	  ret = pthread_create ( &thread, NULL, get_cold_files, NULL);
-	  if(ret) {
-		printf("Pthread create failed\n");
-		exit(1);
-	  }
-    }
 	//printf("in the read buf : <%s> and size <%d>\n", buf,size);
 	return size;
 }
@@ -1176,7 +1176,7 @@ static int rmfs_unlink(const char *path)
 	char lpath[100];
 	memset(lpath,'\0',100);
 	memcpy(lpath,path,strlen(path));  
-
+	pthread_t thread;
 	char *token=strtok(lpath, "/");
 	Node temp=root,prev=NULL,sib;
 
@@ -1210,6 +1210,18 @@ static int rmfs_unlink(const char *path)
 	}
 
 	freemalloc(temp);
+
+
+    if((checkMinStorageThreshold(MIN_STORAGE_THRESHOLD)) && (thread_flag == 0))
+    {
+	  thread_flag = 1;	
+	  int ret = pthread_create ( &thread, NULL, get_cold_files, NULL);
+	  if(ret) {
+		printf("Pthread create failed\n");
+		exit(1);
+	  }
+    }
+
 	return 0;
 }
 
@@ -1218,6 +1230,7 @@ static int rmfs_rmdir(const char *path)
 {
 	char lpath[100];
 	memset(lpath,'\0',100);
+	pthread_t thread;
 	memcpy(lpath,path,strlen(path));  
 
 	char *token=strtok(lpath, "/");
@@ -1258,6 +1271,17 @@ static int rmfs_rmdir(const char *path)
 	}
 
 	freemalloc(temp);
+
+	if((checkMinStorageThreshold(MIN_STORAGE_THRESHOLD)) && (thread_flag == 0))
+    {
+	  thread_flag = 1;	
+	  int ret = pthread_create ( &thread, NULL, get_cold_files, NULL);
+	  if(ret) {
+		printf("Pthread create failed\n");
+		exit(1);
+	  }
+    }
+
 	return 0;
 }
 
@@ -1278,6 +1302,7 @@ static int rmfs_truncate(const char *path, off_t size)
 	char lpath[100];
 	memset(lpath,'\0',100);
 	memcpy(lpath,path,strlen(path));  
+	pthread_t thread;
 
 	char *token=strtok(lpath, "/");
 	Node dirNode=root;
@@ -1529,15 +1554,7 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 		exit(1);
 	  }
 	}
-	else if((checkMinStorageThreshold(MIN_STORAGE_THRESHOLD)) && (thread_flag == 0))
-	{
-	  thread_flag = 1;	
-	  ret = pthread_create ( &thread, NULL, get_cold_files, NULL);
-	  if(ret) {
-		printf("Pthread create failed\n");
-		exit(1);
-	  }
-	}		
+
 	return size;
 }
 
