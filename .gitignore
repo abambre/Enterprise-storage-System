@@ -1,4 +1,6 @@
 *.c~
 *.txt~
 *.swp
+*.c.swp
 *.h~
+*.h.swp
