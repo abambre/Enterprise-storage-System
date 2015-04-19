@@ -288,7 +288,7 @@ void *track_cold_files() {
 	List_item *temp = NULL;
 
 	printf("One Thread getting called\n");
-	sleep(1);
+	//sleep(1);
 	num_files = populate_access_list();
 
 
@@ -669,8 +669,6 @@ static int rmfs_getattr(const char *path, struct stat *stbuf)
 			stbuf->st_nlink = 1;
 			stbuf->st_atime=temp->access_time;
 			stbuf->st_mtime=temp->access_time;
-			if(temp->inmemory_node_flag == False)
-				stbuf->st_mode= S_IFLNK;
 		}
 		else 
 			res = -ENOENT;
@@ -1896,7 +1894,7 @@ void write_access_cold_blocks(Node cold_file){
 
 	while(temp != NULL)
 	{
-		if(difftime(latest_file_access_time,cold_file->access_time) > 0){
+		if(difftime(latest_file_access_time,cold_file->access_time) >= 0){
 			hash = hash_calc(temp);
 
 			if(!hashtree_contains(hash)){
@@ -1926,7 +1924,6 @@ void write_access_cold_blocks(Node cold_file){
 
 	while(temp != NULL){
 		printf("Freeing Block\n");
-		sleep(1);
 		free_blk[temp->blk_num] = -1;
 		memset(memory_blocks[temp->blk_num], '\0',BLOCK_SIZE);
 		pthread_mutex_lock(&count_lock);
