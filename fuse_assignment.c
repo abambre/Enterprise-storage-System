@@ -17,10 +17,9 @@ Fuse based File system which supports POSIX functionalities.
 #define FULLPATHNAME 1000 
 #define BLOCK_SIZE 4096
 #define MB_CONVERT 1024*1024
-#define HIGH_THRESHOLD 2
-#define LOW_THRESHOLD 1
-#define MIN_STORAGE_THRESHOLD 1
-#define MAX_STORAGE_THRESHOLD 3
+#define MAX_STORAGE_THRESHOLD 70
+#define OPTIMAL_STORAGE_THRESHOLD 50
+#define MIN_STORAGE_THRESHOLD 30
 #include <fuse.h>
 #include <stdio.h>
 #include <string.h>
@@ -264,7 +263,7 @@ void prepare_nodelist_to_transfer() {
 	long num_file_blks = 0;
 	Node node_considered = NULL;
 
-	num_blks_to_transfer = calc_blcks_transfer(LOW_THRESHOLD);
+	num_blks_to_transfer = calc_blcks_transfer(OPTIMAL_STORAGE_THRESHOLD);
 	//printf("\n########## Number Of blocks to transfer = %ld\n", num_blks_to_transfer);	
 	while(num_blks_to_transfer >= 1) {
 		node_considered = get_inode(&acclist_head);
@@ -304,7 +303,7 @@ void *track_cold_files() {
 	activate_hashtree();
 
 	/*Code to transfer Files*/	
-	while((transfer_list != NULL) && (checkStorageThreshold(LOW_THRESHOLD))) {   //Until the storage utilization drops to 40% continue giving noDe
+	while((transfer_list != NULL) && (checkStorageThreshold(OPTIMAL_STORAGE_THRESHOLD))) {   //Until the storage utilization drops to 40% continue giving noDe
 	  node_to_transfer = get_inode(&transfer_list);
 	  write_access_cold_blocks(node_to_transfer);	
 	}
@@ -424,7 +423,7 @@ void *get_cold_files() {
 	printf("\nSorted Printing  done\n");
 
 	/*Code to retrive Files*/	
-	while((rtvlist_head != NULL) && (checkMinStorageThreshold(MIN_STORAGE_THRESHOLD))) {   //Until the storage utilization drops to 40% continue giving noDe
+	while((rtvlist_head != NULL) && (checkMinStorageThreshold(OPTIMAL_STORAGE_THRESHOLD))) {   //Until the storage utilization drops to 40% continue giving noDe
 	  node_to_retrive = get_inode(&rtvlist_head);
 	  read_access_cold_blocks(node_to_retrive);	
 	}
@@ -1976,7 +1975,7 @@ void write_block_to_file(Block cold_block, char * file_name){
 	strcat(temp_path, file_name);
 
 	fp=fopen(temp_path, "wb");
-	printf("Read Content: %s", memory_blocks[cold_block->blk_num]);
+	//printf("Read Content: %s", memory_blocks[cold_block->blk_num]);
 	file_write_result = fwrite(memory_blocks[cold_block->blk_num],BLOCK_SIZE,1,fp);
 	//file_write_result = fprintf(fp,"%s", memory_blocks[cold_block->blk_num]);
 	printf("\nFile Write Result : %d", file_write_result);
