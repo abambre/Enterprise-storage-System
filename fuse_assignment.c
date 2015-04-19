@@ -259,8 +259,9 @@ void prepare_nodelist_to_transfer() {
 
 	num_blks_to_transfer = calc_blcks_transfer(LOW_THRESHOLD);
 	//printf("\n########## Number Of blocks to transfer = %ld\n", num_blks_to_transfer);	
-	while(num_blks_to_transfer) {
+	while(num_blks_to_transfer >= 1) {
 		node_considered = get_inode(&acclist_head);
+		if(node_considered == NULL) break;
 		num_file_blks = calc_file_blks(node_considered->len);
 		//printf("####Len of %s is %d and num_blocks is %ld\n", node_considered->name, node_considered->len,num_file_blks);
 		insert_back(node_considered, &transfer_list);	
