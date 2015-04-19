@@ -285,6 +285,8 @@ void *track_cold_files() {
 	
 	int num_files;
 	Node node_to_transfer = NULL;
+	List_item *temp = NULL;
+
 	printf("One Thread getting called\n");
 	sleep(1);
 	num_files = populate_access_list();
@@ -312,6 +314,19 @@ void *track_cold_files() {
 	/*if((acclist_head == NULL) && (checkStorageThreshold(1))) {
 	 printf("Storage full but access list empty - No more files to transfer\n");
 	}*/
+	printf("Freeing memory\n");
+	while(acclist_head != NULL) {
+		temp = acclist_head;
+		acclist_head = acclist_head->next;
+		free(temp);
+	}
+	temp = NULL;
+	while(transfer_list	!= NULL) {
+		temp = transfer_list;
+		transfer_list = transfer_list->next;
+		free(temp);
+	}	
+	temp = NULL;
 	printf("Exiting thread\n");
 	thread_flag = 0;
 	pthread_exit(NULL);
@@ -741,6 +756,7 @@ static int rmfs_read(const char *path, char *buf, size_t size, off_t offset,
 {
 	size_t len;
 	(void) fi;
+	int ret = 0;
 	char lpath[100];
 	memset(lpath,'\0',100);
 	pthread_t thread;
@@ -817,12 +833,23 @@ static int rmfs_read(const char *path, char *buf, size_t size, off_t offset,
 
 	} else
 		size = 0;
+	
+	if((checkStorageThreshold(MAX_STORAGE_THRESHOLD)) && (thread_flag == 0)) {
+	/*multithread to keep track of cold files*/
+	  thread_flag = 1;	
+		latest_file_access_time = time(NULL);
+	  ret = pthread_create ( &thread, NULL, track_cold_files, NULL);
+	  if(ret) {
+		printf("Pthread create failed\n");
+		exit(1);
+	  }
+	}
 
 
     if((checkMinStorageThreshold(MIN_STORAGE_THRESHOLD)) && (thread_flag == 0))
     {
 	  thread_flag = 1;	
-	  int ret = pthread_create ( &thread, NULL, get_cold_files, NULL);
+	  ret = pthread_create ( &thread, NULL, get_cold_files, NULL);
 	  if(ret) {
 		printf("Pthread create failed\n");
 		exit(1);
