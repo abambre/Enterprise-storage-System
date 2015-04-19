@@ -19,8 +19,8 @@ Fuse based File system which supports POSIX functionalities.
 #define MB_CONVERT 1024*1024
 #define HIGH_THRESHOLD 2
 #define LOW_THRESHOLD 1
-#define MIN_STORAGE_THRESHOLD 3	
-#define MAX_STORAGE_THRESHOLD 5
+#define MIN_STORAGE_THRESHOLD 1
+#define MAX_STORAGE_THRESHOLD 3
 #include <fuse.h>
 #include <stdio.h>
 #include <string.h>
@@ -638,6 +638,8 @@ static int rmfs_getattr(const char *path, struct stat *stbuf)
 			stbuf->st_nlink = 1;
 			stbuf->st_atime=temp->access_time;
 			stbuf->st_mtime=temp->access_time;
+			if(temp->inmemory_node_flag == False)
+				stbuf->st_mode= S_IFLNK;
 		}
 		else 
 			res = -ENOENT;
