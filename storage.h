@@ -24,6 +24,21 @@
 #define MAX_STORAGE_THRESHOLD 70
 #define OPTIMAL_STORAGE_THRESHOLD 50
 #define MIN_STORAGE_THRESHOLD 30
+#define KRED  "\x1B[31m"
+#define RESET "\033[0m" 
+
+#define DEBUG
+#ifdef DEBUG
+#  define D(x) printTime(); x
+#else
+#  define D(x) 
+#endif
+
+#ifdef TRACE
+#  define T(x) printTime(); x
+#else
+#  define T(x) 
+#endif
 
 typedef enum {Nfile, Ndir} Ntype;
 

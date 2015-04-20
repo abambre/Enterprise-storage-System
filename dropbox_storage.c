@@ -1,5 +1,19 @@
 #include "storage.h"
 
+time_t timer;
+char buffer[26];
+struct tm* tm_info;
+
+void printTime(){
+	
+	time(&timer);
+	tm_info = localtime(&timer);
+	
+	strftime(buffer, 26, "%Y:%m:%d %H:%M:%S", tm_info);
+    	//printf("%s%s ",KRED, buffer);
+	printf(KRED "%s - " RESET, buffer);
+}
+
 /************************Dropbox API code*********************/
 int download_dropbox_file(char *, char *, char *);
 drbClient * intialize_drop_box(){
@@ -114,72 +128,77 @@ void print_cold_blocks(Block);
 drbClient * intialize_drop_box();
 gboolean hashtree_contains(char *);
 /************************Code for Accessing Blocks**************/
-/*void check_all_hashes(Node cold_file){
-Block temp = cold_file->data;
+/*void check_new_hashes(Node cold_file){
+Block cold_block = cold_file->data;
 
 char *current_hash;
 
-while(temp != NULL)
+while(cold_block != NULL)
 {
-current_hash = temp->server_block_hash;
+current_hash = cold_block->server_block_hash;
 printf("\n\nHash under consideration: %s\n\n",current_hash);
-temp = temp->nxt_blk;
+cold_block = cold_block->nxt_blk;
 }
 }*/
 /************************Code for Accessing Blocks**************/
 void write_access_cold_blocks(Node cold_file){
 	
-	Block temp = cold_file->data;
+	Block cold_block = cold_file->data;
 	char *hash;
-	
-	while(temp != NULL)
+
+	D(printf("File: %s to be transfered to cold storage.\n",cold_file->name));
+
+	while(cold_block != NULL)
 	{
 		if(difftime(latest_file_access_time,cold_file->access_time) >= 0){
-			hash = hash_calc(temp);
+			hash = hash_calc(cold_block);
 			
 			if(!hashtree_contains(hash)){
-				write_block_to_file(temp,hash);
+				write_block_to_file(cold_block,hash);
 				move_to_dropbox_cold_storage(hash);
 				update_hashtree(hash);
+
+				T(printf("Block: %ld transfered to cold storage.\n",cold_block->blk_num));
 			}else
 			{
-				printf("Block Already on Server.\n");
+				T(printf("Block: %ld already on cold storage.\n",cold_block->blk_num));
 			}
 			
-			temp->server_block_hash = hash;
-			temp->inmemory_flag = False;
+			cold_block->server_block_hash = hash;
+			cold_block->inmemory_flag = False;
 			
-			//print_cold_blocks(temp);
-			temp = temp->nxt_blk;
+			//print_cold_blocks(cold_block);
+			cold_block = cold_block->nxt_blk;
 		}
 		else{
-			printf("Cold File %s accessed just now! Breaking File Transfer. Cold File Access Time: %ld, Benchmark Time: %ld\n",cold_file->name,cold_file->access_time,latest_file_access_time);
+			D(printf("Cold File: %s accessed just now! \nBreaking File Transfer. Cold File Access Time: %ld, Benchmark Time: %ld\n",cold_file->name,cold_file->access_time,latest_file_access_time));
+
 			return;
 		}
 	}
 	
 	// Freeing all the transfered blocks for host storage.
 	pthread_mutex_lock(&(cold_file->lock));
-	temp = cold_file->data;
+	cold_block = cold_file->data;
 	
-	while(temp != NULL){
-		printf("Freeing Block\n");
-		free_blk[temp->blk_num] = -1;
-		memset(memory_blocks[temp->blk_num], '\0',BLOCK_SIZE);
+	while(cold_block != NULL){
+		T(printf("Block: %ld, freeing its memory.\n",cold_block->blk_num));
+		free_blk[cold_block->blk_num] = -1;
+		memset(memory_blocks[cold_block->blk_num], '\0',BLOCK_SIZE);
 		pthread_mutex_lock(&count_lock);
 		free_block_count++;
 		pthread_mutex_unlock(&count_lock);
-		temp = temp->nxt_blk;
+		cold_block = cold_block->nxt_blk;
 	}
 	
 	cold_file->inmemory_node_flag=False;
 	
 	pthread_mutex_unlock(&(cold_file->lock));
-	//check_all_hashes(cold_file);
+	//check_new_hashes(cold_file);
 }
 
-void print_cold_blocks(Block temp){
-	printf("\nAfter Changing Data Block \"%d\" and data: \"%s\" \n",temp->blk_num, temp->server_block_hash);
+void print_cold_blocks(Block cold_block){
+	printf("\nAfter Changing Data Block \"%d\" and data: \"%s\" \n",cold_block->blk_num, cold_block->server_block_hash);
 }
 
 /***********************Code for Finding Hash for a Block***************/
@@ -253,12 +272,12 @@ void write_block_to_file(Block cold_block, char * file_name){
 	FILE *fp;
 	int file_write_result;
 	
-	char temp_path[80];
-	memset(temp_path,'\0',80);
-	strcpy(temp_path, "./");
-	strcat(temp_path, file_name);
+	char cold_block_path[80];
+	memset(cold_block_path,'\0',80);
+	strcpy(cold_block_path, "./");
+	strcat(cold_block_path, file_name);
 	
-	fp=fopen(temp_path, "wb");
+	fp=fopen(cold_block_path, "wb");
 	//printf("Read Content: %s", memory_blocks[cold_block->blk_num]);
 	file_write_result = fwrite(memory_blocks[cold_block->blk_num],BLOCK_SIZE,1,fp);
 	//file_write_result = fprintf(fp,"%s", memory_blocks[cold_block->blk_num]);
@@ -290,23 +309,23 @@ void update_hashtree(char *hash){
 /***********************Code for Getting Server Side Hashtree (hashOfBlock -> BlockNames: Already Implemented Above)***************/
 /***********************Code for Identifying Block Files to be copied from Server***************/
 /***********************Code for Writing Block File data to blocks on client***************/
-void read_block_from_file(char * file_name, Block temp){
+void read_block_from_file(char * file_name, Block cold_block){
 	
 	FILE *fp;
-	char temp_path[80];
+	char cold_block_path[80];
 	char *string = malloc(BLOCK_SIZE + 1);
 	
-	strcpy(temp_path, "./");
-	strcat(temp_path, file_name);
+	strcpy(cold_block_path, "./");
+	strcat(cold_block_path, file_name);
 	
-	fp=fopen(temp_path, "rb");
+	fp=fopen(cold_block_path, "rb");
 	fread(string, BLOCK_SIZE, 1, fp);
 	
 	fclose(fp);
 	//printf("Fetched String: %s",string);
 	
 	long fblk = getFreeBlock();
-	temp -> blk_num =fblk;
+	cold_block -> blk_num =fblk;
 	strncpy(memory_blocks[fblk], string, strlen(string));
 	
 	remove(file_name);
@@ -314,7 +333,7 @@ void read_block_from_file(char * file_name, Block temp){
 
 void read_access_cold_blocks(Node cold_file){
 	
-	Block temp = cold_file->data;
+	Block cold_block = cold_file->data;
 	char *hash;
 	int hashtree_activated = 0;
 	
@@ -324,23 +343,23 @@ void read_access_cold_blocks(Node cold_file){
 		hashtree_activated = 1;
 	}
 	
-	while(temp != NULL)
+	while(cold_block != NULL)
 	{
-		hash = temp->server_block_hash;
+		hash = cold_block->server_block_hash;
 		
 		if(hashtree_contains(hash)){
 			fetch_from_dropbox_cold_storage(hash);
-			read_block_from_file(hash, temp);
+			read_block_from_file(hash, cold_block);
 		}else
 		{
 			printf("Block not found on Server.\n");
 		}
 		
-		temp->server_block_hash = NULL;
-		temp->inmemory_flag = True;
+		cold_block->server_block_hash = NULL;
+		cold_block->inmemory_flag = True;
 		
-		//print_cold_blocks(temp);
-		temp = temp->nxt_blk;
+		//print_cold_blocks(cold_block);
+		cold_block = cold_block->nxt_blk;
 	}
 	/**********Move this to calling function*********************/
 	cold_file->inmemory_node_flag = True;
