@@ -34,6 +34,7 @@
 #  define D(x) 
 #endif
 
+#define TRACE
 #ifdef TRACE
 #  define T(x) printTime(); x
 #else
