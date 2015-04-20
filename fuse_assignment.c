@@ -1,6 +1,6 @@
 
 /*
-Author : Aditya Ambre
+Author : Aditya Ambre, Madhura S. Raghavan, Rohit Arora
 Fuse based File system which supports POSIX functionalities.
 
   FUSE: Filesystem in Userspace
@@ -9,40 +9,38 @@ Fuse based File system which supports POSIX functionalities.
   This program can be distributed under the terms of the GNU GPL.
   See the file COPYING.
 
-  gcc -Wall rmfs.c `pkg-config fuse --cflags --libs` -o rmfs
+  make unifiedFS
  */
 
 #include "storage.h"
 
-
+// List for access and retrival of files.
 List_item *acclist_head = NULL;
 List_item *transfer_list = NULL;
 List_item *rtvlist_head = NULL;
 
-
-//Temp flag
-int temp_flag = 0;
-int thread_flag = 0;
-time_t latest_file_access_time;
-pthread_mutex_t count_lock;
-
-/*
-Initially all the function were to make sure reusability is maintain, but method switching cost is verfied after
-running postmark program. Hence lookup code is repeated in the all the function to make it faster.
- */
-
-// Array maintaining free blocks
-int *free_blk=NULL;
+// Memory Counter variables
+long long malloc_counter=0,malloc_limit=0,block_count=0, free_block_count=0;
+int block_number;
 
 // defining root node here 
 Node root,buffNode;
 char **memory_blocks=NULL;
-// As there is input limit for the memory defining global variables 
 
-long long malloc_counter=0,malloc_limit=0,block_count=0, free_block_count=0;
+// Array maintaining free blocks
+int *free_blk=NULL;
 
+// Flags
+int thread_flag = 0;
+
+// Benchmark Time
+time_t latest_file_access_time;
+
+// Locks
+pthread_mutex_t count_lock;
+
+// Dropboc Client and HashTree Data Structure
 drbClient *cli;
-int block_number;
 GHashTable* hashtree; 
 
 int getFreeBlock()
@@ -175,57 +173,6 @@ static int directory_lookup(const char *path,Node *t,int mode)
 	*t=temp;
 	return 0;
 }
-
-/*
-static int delete_node(const char *path,Ntype t)
-{
-//	printf("inside the delete_node %s\n",path);
-	char lpath[100];
-	memset(lpath,'\0',100);
-	memcpy(lpath,path,strlen(path));	
-
-	char *token=strtok(lpath, "/");
-	Node temp=root,prev=NULL,sib;
-
-	while( token != NULL) 
-    {
-	  prev=temp;sib=NULL;
-      temp=temp->child;
-
-      while(temp!=NULL) {
-      	if (strcmp(token, temp->name) == 0) {
-      		printf("found %s \n",temp->name );
-      		break;
-        }
-        sib=temp;      
-      	temp=temp->next; 
-  	  }
-      if(temp==NULL)
-      {
-      	return -1;
-      }
-      token = strtok(NULL, "/");
-    }
-
-    if(temp->type==Ndir && temp->child != NULL)
-    {
-       return ENOTEMPTY;
-    }
-
-    if(sib==NULL)
-    {
-    	prev->child=temp->next;
-    }
-    else if(sib!=NULL)
-    {
-    	sib->next=temp->next;
-    }
-
-
-    freemalloc(temp);
-    return 0;
-}
- */
 
 // This function used for getting attribute information for directory or file
 static int rmfs_getattr(const char *path, struct stat *stbuf)
@@ -485,20 +432,6 @@ static void getFileName(const char *path,char lastname[])
 	strncpy(lastname,lastslsh,strlen(lastslsh));
 	return;
 }
-
-/*
-static void getLastChild(Node *t)
-{
-	Node child=*t;
-	child=child->child;
-	while(child->next!=NULL)
-    {
-    //	printf("inside the getlastchildloop %s\n",child->name);
-		child=child->next;
-    }
- *t=child;
-}
- */
 
 // Make directory 
 static int rmfs_mkdir(const char *path, mode_t mode)
@@ -1118,38 +1051,6 @@ static int rmfs_write(const char *path, const char *buf, size_t size,
 		}
 	}
 
-	/*
-  if(dirNode->data!=NULL)
-    	len=dirNode->len;
-  int mlc_chk=0;
-	if (offset + size > len) {
-		newSize=offset + size;
-		if(len==0){
-			mlc_chk=ckmalloc_w(newSize+1,&(dirNode->data));
-      dirNode->len=newSize+1;
-      if(mlc_chk!=0)
-        return mlc_chk;
-		}
-		else{
-
-       if(malloc_limit < (malloc_counter+(newSize-len)+1))
-       {
-          return -ENOSPC;
-       }
-			char *p=realloc(dirNode->data,newSize+1);
-      if(p==NULL)
-        return errno;
-      dirNode->data=p;
-			dirNode->data[newSize]='\0';
-      dirNode->len=newSize+1;
-      malloc_counter+=(newSize-len+1);
-		}		
-	}
-	//printf("dir data :%s\n",dirNode->data);
-	strncpy(dirNode->data + offset,buf, size);
-	//printf(">>>> after dir data :%s\n",dirNode->data);
-
-	 */
 	dirNode->len=(size+offset) > dirNode->len? (size+offset):dirNode->len;
 	dirNode->access_time = time(NULL);
 	//write_access_cold_blocks(dirNode); 
@@ -1206,169 +1107,6 @@ static struct fuse_operations rmfs_oper = {
 		.write 		= rmfs_write,
 		.rename   = rmfs_rename,
 };
-
-// For testing purpose .. creates list of files and directories
-/*
-int  makeSamplefile()
-{
-    int mlc_chk=0;
-    strncpy(root->name,"/",strlen("/"));
-    root->type=Ndir;
-    root->next=NULL;
-
-    Node first;
-    mlc_chk=ckmalloc(sizeof(*root),&first);
-    if(mlc_chk!=0)
-      return mlc_chk;
-    strncpy(first->name,"rmfs",strlen("rmfs"));
-    first->type=Nfile;
-    first->len=sizeof(char)*30;
-    first->data=malloc(sizeof(char)*30);
-    strncpy(first->data,"This is rmfs\n",strlen("This is rmfs\n"));
-
-    Node sec;
-    mlc_chk=ckmalloc(sizeof(*root),&sec);
-    if(mlc_chk!=0)
-      return ENOMEM;
-    strncpy(sec->name,"mello",strlen("mello"));
-    sec->type=Nfile;
-    sec->len=sizeof(char)*50;
-    sec->data=malloc(sizeof(char)*50);
-    strncpy(sec->data,"This is mello\n",strlen("This is mello\n"));
-
-    Node third;
-    mlc_chk=ckmalloc(sizeof(*root),&third);
-    if(mlc_chk!=0)
-      return ENOMEM;
-    strncpy(third->name,"extra",strlen("extra"));
-    third->type=Ndir;
-
-    Node third_ch;
-    mlc_chk=ckmalloc(sizeof(*root),&third_ch);
-    if(mlc_chk!=0)
-      return ENOMEM;
-    strncpy(third_ch->name,"file1",strlen("file1"));
-    third_ch->type=Nfile;
-    third_ch->len=sizeof(char)*30;
-    third_ch->data=malloc(sizeof(char)*30);
-    strncpy(third_ch->data,"This is file1\n",strlen("This is file1\n"));
-
-    root->child=first;
-    first->next=sec;
-    first->child=NULL;
-    sec->next=third;
-    sec->child=NULL;
-    third->child=third_ch;
-    third_ch->next=NULL;
-
-    return 0;
-}
-
-// To make FS persistent , during the umount creates serialize file for the metadata information and data stored inside the file 
-// in the output directory specified at command line
-void writeToFile(FILE **p,char pre[FULLPATHNAME],Node t)
-{
-
-  if(t==NULL)
-    return;
-
-   //printf(" pre : %s node name : %s\n",pre,t->name );
-   char finalname[FULLPATHNAME];
-   memset(finalname,'\0',FULLPATHNAME);
-    //strcat(prefix, src);
-   strncpy(finalname, pre,strlen(pre));
-   if(strcmp(pre,"/")!=0)
-    strcat(finalname, "/");
-   strcat(finalname, t->name);
-
-  //printf("inside the writeToFile <%s>\n",finalname);
-    if(t->type==Nfile) {
-     fprintf(*p, "%d|%s|%ld|\n",0,finalname,(t->data==NULL ? strlen("EMPTY\n"):strlen(t->data)));
-     fprintf(*p, "%s",(t->data==NULL ? "EMPTY\n" : t->data));
-   }
-   else
-   {
-     fprintf(*p, "%d|%s|\n",1,finalname);
-   }
-
-   if(t->child != NULL)
-    writeToFile(p,finalname,t->child);
-
-   if(t->next != NULL)
-    writeToFile(p,pre,t->next);
-
-   return;
-}
-
-// While mountign ramfs it checks the persisten file exists or not and restore the file system as earlier.
-void usePersistentFile(FILE **fp)
-{
-
-  while (1) 
-  {
-    ssize_t read;
-    char * line = NULL;
-    size_t len = 0;
-    mode_t mode=0;
-    int status=0;
-    struct fuse_file_info *fi=NULL;
-
-    if((read = getline(&line, &len, *fp)) == -1)
-    {
-       break;
-    }
-
-    //printf("Retrieved line of length %zu :\n", read);
-    //printf("%s", line);
-    long numr;
-    char *token=strtok(line, "|");           
-    int isfile=atoi(token);
-    //printf(" isfile :%d\n",isfile );     
-    token = strtok(NULL, "|");
-    //printf("filename <%s>\n",token);
-    if(isfile ==0)
-    {
-        char fullfilepath[1000];
-        memset(fullfilepath,'\0',1000);
-        strncpy(fullfilepath,token,strlen(token));
-      //  printf("fullfilepath <%s>\n",fullfilepath);
-        token = strtok(NULL, "|");
-        long filelen=atol(token);
-      //  printf("filelen <%ld>\n",filelen);
-        char* buffer=malloc(filelen);
-        memset(buffer,'\0',filelen);
-        if((numr=fread(buffer,1,filelen,*fp))!=filelen){
-            if(ferror(*fp)!=0){
-                fprintf(stderr,"read file error.\n");
-                exit(1);
-            }
-        }
-       // printf(" buffer :<%s>\n",buffer );
-        status=rmfs_create(fullfilepath, mode,fi);
-        if(status !=0)
-          break;
-        if(strcmp(buffer,"EMPTY\n")!=0)
-	{
-          status=rmfs_write(fullfilepath, buffer, filelen,0, fi);
-      	  if(status !=filelen)
-            break;
-	}
-        free(buffer);
-    }
-    else
-    {
-      status=rmfs_mkdir(token,mode);
-      if(status !=0)
-          break;
-    }
-
-    if (line)
-       free(line);
-  }
-}
-
- */
-
 
 // Main function takes arguments as mentioned ..
 // Mount point -  where FS should be mounted 

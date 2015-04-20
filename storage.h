@@ -60,8 +60,6 @@ typedef struct List_item {
 	struct List_item *next;
 }List_item ;
 
-
-
 drbClient * intialize_drop_box();
 void move_to_dropbox_cold_storage(char * );
 void fetch_from_dropbox_cold_storage(char * );
@@ -97,23 +95,19 @@ void print_retrieval_list();
 List_item *sort_rlist(List_item *);
 void *get_cold_files();
 
-
-
+// List for access and retrival of files.
 extern List_item *acclist_head;
 extern List_item *transfer_list;
 extern List_item *rtvlist_head;
-//List_item *fs_head = NULL;
 
-//Temp flag
-extern int temp_flag;
+// Flags
 extern int thread_flag;
-extern time_t latest_file_access_time;
-extern pthread_mutex_t count_lock;
 
-/*
-Initially all the function were to make sure reusability is maintain, but method switching cost is verfied after
-running postmark program. Hence lookup code is repeated in the all the function to make it faster.
- */
+// Benchmark Time
+extern time_t latest_file_access_time;
+
+// Locks
+extern pthread_mutex_t count_lock;
 
 // Array maintaining free blocks
 extern int *free_blk;
@@ -123,10 +117,13 @@ extern Node root,buffNode;
 extern char **memory_blocks;
 // As there is input limit for the memory defining global variables 
 
+// Memory Counter variables
 extern long long malloc_counter,malloc_limit,block_count, free_block_count;
-
-extern drbClient *cli;
 extern int block_number;
+
+// Dropboc Client and HashTree Data Structure
+extern drbClient *cli;
 extern GHashTable* hashtree; 
+
 
 #endif
