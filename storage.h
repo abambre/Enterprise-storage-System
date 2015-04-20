@@ -10,7 +10,7 @@
 #include <openssl/sha.h>
 #include <dropbox.h>
 #include <memStream.h>
-#include <glib.h> 
+#include <glib.h>
 #include "fuse_common.h"
 #include <time.h>
 #include <pthread.h>
@@ -18,7 +18,7 @@
 
 #define FUSE_USE_VERSION 26
 #define FILENAME_SIZE 30
-#define FULLPATHNAME 1000 
+#define FULLPATHNAME 1000
 #define BLOCK_SIZE 4096
 #define MB_CONVERT 1024*1024
 #define MAX_STORAGE_THRESHOLD 70
@@ -29,26 +29,26 @@ typedef enum {Nfile, Ndir} Ntype;
 
 typedef enum {False, True } Bool;
 
-struct block_t {   
-  long blk_num;
-  struct block_t *nxt_blk;
+struct block_t {
+	long blk_num;
+	struct block_t *nxt_blk;
 	char * server_block_hash;
 	Bool inmemory_flag;
 };
 
 typedef struct block_t *Block;
 
-// Main inode structure 
-struct node_t {		
-  Ntype type;
-  char name[FILENAME_SIZE];		
-  struct node_t *child;	
-  struct node_t *next;
-  Block data;
-  int len;
-  time_t access_time;
-  Bool inmemory_node_flag;
-  pthread_mutex_t lock;
+// Main inode structure
+struct node_t {
+	Ntype type;
+	char name[FILENAME_SIZE];
+	struct node_t *child;
+	struct node_t *next;
+	Block data;
+	int len;
+	time_t access_time;
+	Bool inmemory_node_flag;
+	pthread_mutex_t lock;
 };
 
 typedef struct node_t *Node;
@@ -56,7 +56,7 @@ typedef struct node_t *Node;
 
 /*Singly linked list of all files - For cold file track*/
 typedef struct List_item {
-	Node inode; 	
+	Node inode;
 	struct List_item *next;
 }List_item ;
 
@@ -112,10 +112,10 @@ extern pthread_mutex_t count_lock;
 // Array maintaining free blocks
 extern int *free_blk;
 
-// defining root node here 
+// defining root node here
 extern Node root,buffNode;
 extern char **memory_blocks;
-// As there is input limit for the memory defining global variables 
+// As there is input limit for the memory defining global variables
 
 // Memory Counter variables
 extern long long malloc_counter,malloc_limit,block_count, free_block_count;
@@ -123,7 +123,7 @@ extern int block_number;
 
 // Dropboc Client and HashTree Data Structure
 extern drbClient *cli;
-extern GHashTable* hashtree; 
+extern GHashTable* hashtree;
 
 
 #endif
