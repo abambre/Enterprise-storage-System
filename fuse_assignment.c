@@ -660,7 +660,12 @@ static int rmfs_getattr(const char *path, struct stat *stbuf)
 
 		if(temp!=NULL)
 		{
-			stbuf->st_mode = S_IFREG | 0666;
+			if(temp->inmemory_node_flag == False){
+				stbuf->st_mode = S_IFREG | 1666;                        
+			}
+			else{
+				stbuf->st_mode = S_IFREG | 0666;
+			}
 			stbuf->st_size = 0;
 			if(temp->type==Ndir)
 				stbuf->st_mode = S_IFDIR | 0666;
