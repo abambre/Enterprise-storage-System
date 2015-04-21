@@ -141,5 +141,10 @@ extern int block_number;
 extern drbClient *cli;
 extern GHashTable* hashtree;
 
+//Timer variables
+extern time_t timer;
+extern char buffer[26];
+extern struct tm* tm_info;
+
 
 #endif

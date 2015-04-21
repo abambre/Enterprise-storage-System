@@ -1,8 +1,8 @@
 #include "storage.h"
 
-time_t timer;
-char buffer[26];
-struct tm* tm_info;
+time_t timer = NULL;
+char buffer[26] = {NULL};
+struct tm* tm_info = NULL;
 
 void printTime(){
 	

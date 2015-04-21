@@ -1,15 +1,16 @@
 #include "storage.h"
 
+/*Check whether Storage utilization exceeds the specified percentage*/
 int checkStorageThreshold(int percent)
 {
 	int ret = 0;
 	ret = ((float)((float)(block_count-free_block_count)/(float)block_count)*100) > percent ? 1:0;
-	printf("Inside the checkStorageThreshold <%f> \n",(((float)(block_count-free_block_count)/(float)block_count)*100));
-	printf("Percent is %d, Used Blocks is %ld, Block count is %ld and CheckColdStorage ret is %d\n", percent, block_count-free_block_count, block_count, ret);
+	//printf("Inside the checkStorageThreshold <%f> \n",(((float)(block_count-free_block_count)/(float)block_count)*100));
+	//printf("Percent is %d, Used Blocks is %ld, Block count is %ld and CheckColdStorage ret is %d\n", percent, block_count-free_block_count, block_count, ret);
 	return ret;
 }
 
-/*function to insert a Node to the back of the list specified with head*/
+/*function to insert a Node to the back of the specified list*/
 void insert_back(Node inode, List_item **head) {
 	if ((head == NULL) || (inode == NULL)) return;
 	List_item *new_node = NULL;
@@ -38,7 +39,7 @@ void insert_back(Node inode, List_item **head) {
 	return;
 }
 
-/*Remove from front of List - Least accessed File/Cold File specified by head*/
+/*Remove from front of List */
 Node get_inode(List_item **head) {
 	if(head == NULL) return NULL;
 	Node ret;
@@ -50,7 +51,7 @@ Node get_inode(List_item **head) {
 	return ret;
 }
 
-/*Sort the list according to access_time*/
+/*Sort the list according to access_time - Low to high*/
 List_item *sort_list(List_item *lroot) {
 	double seconds;
 	List_item *curr = NULL, *least = NULL, *least_prev = NULL, *prev = NULL;
@@ -82,7 +83,7 @@ List_item *sort_list(List_item *lroot) {
 	return least;
 }
 
-/*Sort the list according to Size*/
+/*Sort the list according to Size - High to low*/
 List_item *sort_list_size(List_item *lroot) {
 	int size;
 	List_item *curr = NULL, *highest = NULL, *highest_prev = NULL, *prev = NULL;
@@ -119,24 +120,25 @@ List_item *sort_list_size(List_item *lroot) {
 	return highest;
 }
 
-
+/*Function t print the File List*/
 void print_list(List_item *list) {
 	List_item *temp = NULL;
+	
+	D(printf("\nFormat:  <FileName>:<File access_time in s>:<File size>\n"));
+	T(printf("----------------------------------------------------------------------------\n"));
 	if (list == NULL) {
 		printf("List head empty\n");
 		return;
 	}
-	/*if (*acclist_head == NULL) {
-	printf("List is empty\n");
-	return;
-	}*/
 	temp = list;
 	while(temp != NULL) {
-		printf("%s:%ld->",temp->inode->name, temp->inode->access_time);
+		D(printf("%s:%ld:%d->",temp->inode->name, temp->inode->access_time, temp->inode->len));
 		temp = temp->next;
 	}
+	T(printf("\n----------------------------------------------------------------------------\n"));
 }
 
+/*Populate List of all files in memory*/
 int populate_access_list() {
 	Node temp = root;
 	List_item *fs_head = NULL;
@@ -164,6 +166,7 @@ int populate_access_list() {
 	return count;
 }
 
+/*Calucate the no. of blocks to be transferred to cold storage*/
 long calc_blcks_transfer(int low_thresh) {
 	long num_blks_for_lowthresh = 0;
 	long blks_to_transfer = 0;
@@ -172,9 +175,11 @@ long calc_blcks_transfer(int low_thresh) {
 	return blks_to_transfer;
 }
 
+/*Calculate the no. of blocks used by the specified file*/
 int calc_file_blks(int file_len) {
 	return ((file_len + (BLOCK_SIZE-1)) / BLOCK_SIZE);
 }
+
 
 void prepare_nodelist_to_transfer() {
 	long num_blks_to_transfer = 0;
@@ -193,32 +198,37 @@ void prepare_nodelist_to_transfer() {
 		//printf("Number of blks remaining to be transferred is %ld\n", num_blks_to_transfer);
 	}
 	//printf("\n Transfer List before sorting is :\n");
-	print_list(transfer_list);
+	//print_list(transfer_list);
 	transfer_list = sort_list_size(transfer_list);
 }
 
-/*-----------------Track cold Files---------------*/
+/*----------Main thread that initiates Hot-to-Cold Data Transfer-------*/
 
 void *track_cold_files() {
 	
 	int num_files;
 	Node node_to_transfer = NULL;
 	List_item *temp = NULL;
-	
-	printf("One Thread getting called\n");
+	sleep(1);
+	T(printf("\n-----------------------------------------------------------------------------------\n"));
+	T(printf("Storage Utilization exceeded the Maximum %d percent threshold\n", MAX_STORAGE_THRESHOLD));
+	T(printf("\n Current Storage Utilization = %d Blocks\n Total Storage of System = %d Blocks\n",block_count-free_block_count, block_count));
 	//sleep(1);
 	num_files = populate_access_list();
 	
 	
 	acclist_head = sort_list(acclist_head);
-	printf("\n***Printing Sorted Access List***\n");
+	D(printf("\n------------------------------------------------------------------------------------\n"));
+	D(printf("All Files in System sorted according to access time\n"));
 	print_list(acclist_head);
-	
-	/****************** New Changes******************/
-	prepare_nodelist_to_transfer();
-	printf("\n****Printing Access List based on Size***\n");
+	D(printf("\n------------------------------------------------------------------------------------\n"));
+
+	prepare_nodelist_to_transfer();        //Select FIles to transfer and sort them according to Size
+	D(printf("\n------------------------------------------------------------------------------------\n"));
+	D(printf("Files to be transferred to Cold Storage - Sorted according to the File Size\n"));
 	print_list(transfer_list);
-	
+	D(printf("\n------------------------------------------------------------------------------------\n"));
+
 	/**********Move this to calling function*********************/
 	activate_hashtree();
 	
@@ -229,14 +239,16 @@ void *track_cold_files() {
 	}
 	/**********Move this to calling function*********************/
 	upload_dropbox_file("./dropbox_hashtree.txt", "dropbox_hashtree.txt", "/dropbox_hashtree.txt");
-	/*if((acclist_head == NULL) && (checkStorageThreshold(1))) {
-	printf("Storage full but access list empty - No more files to transfer\n");
-	}*/
-	printf("Freeing memory\n");
+	
+	if((transfer_list == NULL) && (checkStorageThreshold(OPTIMAL_STORAGE_THRESHOLD))) {
+		D(printf("Storage Utilization is above Maximum threshold - But no files in the transfer to cold\n"));
+	}
+	//printf("Freeing memory\n");
 	while(acclist_head != NULL) {
 		temp = acclist_head;
 		acclist_head = acclist_head->next;
 		free(temp);
+		//temp = NULL;
 	}
 	temp = NULL;
 	while(transfer_list	!= NULL) {
@@ -245,19 +257,21 @@ void *track_cold_files() {
 		free(temp);
 	}
 	temp = NULL;
-	printf("Exiting thread\n");
+	T(printf("\n Completed Hot-to-Cold Data transfer\n"));
+	T(printf("\n Current Storage Utilization = %d Blocks\n Total Storage of System = %d Blocks\n",block_count-free_block_count,block_count));
+	T(printf("\n-----------------------------------------------------------------------------------------\n"));
 	thread_flag = 0;
 	pthread_exit(NULL);
 }
 
-/*----------------Get cold files ------------------------*/
+/*-------------Function to Transfer files from Cold-to-Hot Storage ------------------------*/
 
 int checkMinStorageThreshold(int percent)
 {
 	int ret = 0;
 	ret = ((float)((float)(block_count-free_block_count)/(float)block_count)*100) < percent ? 1:0;
-	printf("Inside the checkMinStorageThreshold <%f> \n",(((float)(block_count-free_block_count)/(float)block_count)*100));
-	printf("Percent is %d, Used Blocks is %ld, Block count is %ld and CheckColdStorage ret is %d\n", percent, block_count-free_block_count, block_count, ret);
+	//printf("Inside the checkMinStorageThreshold <%f> \n",(((float)(block_count-free_block_count)/(float)block_count)*100));
+	//printf("Percent is %d, Used Blocks is %ld, Block count is %ld and CheckColdStorage ret is %d\n", percent, block_count-free_block_count, block_count, ret);
 	return ret;
 }
 
@@ -287,24 +301,6 @@ int populate_retrieval_list() {
 		}
 	}
 	return count;
-}
-
-void print_retrieval_list() {
-	List_item *temp = NULL;
-	if (rtvlist_head == NULL) {
-		printf("List head empty\n");
-		return;
-	}
-	/*if (*rtvlist_head == NULL) {
-	printf("List is empty\n");
-	return;
-	}*/
-	temp = rtvlist_head;
-	printf("Printing File retrieval list\n");
-	while(temp != NULL) {
-		printf("%s:%ld->",temp->inode->name, temp->inode->access_time);
-		temp = temp->next;
-	}
 }
 
 List_item *sort_rlist(List_item *lroot) {
@@ -343,38 +339,40 @@ void *get_cold_files() {
 	int num_files;
 	Node node_to_retrive = NULL;
 	List_item *temp = NULL;
-	printf("get cold files thread getting called\n");
-	//sleep(2);
-	//List_item *rtvlist_head = NULL;
-	
+	sleep(1);
+	T(printf("\n-----------------------------------------------------------------------------------------\n"));
+	T(printf("Storage Utilization below the Minimum %d percent threshold\n",MIN_STORAGE_THRESHOLD ));
+	T(printf("\n Current Storage Utilization = %d Blocks\n Total Storage of System = %d Blocks\n", block_count-free_block_count, block_count));
+
 	num_files = populate_retrieval_list();
-	print_retrieval_list();
-	printf("\nDone printing\n");
-	rtvlist_head = sort_rlist(rtvlist_head);
-	printf("\nSorting done\n");
-	print_retrieval_list();
-	printf("\nSorted Printing  done\n");
+	//D(printf("All the Files on the Cold Storage\n"));
+	//print_list(*rtvlist_head );
+	//printf("\nDone printing\n");
 	
+	rtvlist_head = sort_rlist(rtvlist_head);
+	D(printf("\n-----------------------------------------------------------------------------------------\n"));
+	D(printf("All Files in cold Storage sorted according to access time - Latest to oldest\n"));
+	print_list(rtvlist_head );
+	D(printf("\n------------------------------------------------------------------------------------------\n"));
+
 	/*Code to retrive Files*/
 	while((rtvlist_head != NULL) && (checkMinStorageThreshold(OPTIMAL_STORAGE_THRESHOLD))) {   //Until the storage utilization drops to 40% continue giving noDe
 		node_to_retrive = get_inode(&rtvlist_head);
 		read_access_cold_blocks(node_to_retrive);
 	}
-	/**********Move this to calling function*********************/
-	//upload_dropbox_file("./dropbox_hashtree.txt", "dropbox_hashtree.txt", "/dropbox_hashtree.txt");
-	/*if((rtvlist_head == NULL) && (checkStorageThreshold(1))) {
-	printf("Storage full but retrieval list empty - No more files to retrive\n");
-	}*/
-	
-	printf("Freeing memory\n");
+		
+	//printf("Freeing memory\n");
 	while(rtvlist_head != NULL) {
 		temp = rtvlist_head;
 		acclist_head = rtvlist_head->next;
 		free(temp);
 	}
 	temp = NULL;
-	
-	printf("Exiting thread\n");
+	T(printf("\n Completed Hot-to-Cold Data transfer\n"));
+	T(printf("\n Current Storage Utilization = %d Blocks\n Total Storage of System = %d Blocks\n",block_count-free_block_count, block_count));
+	T(printf("\n-------------------------------------------------------------------------------------------\n"));
+
+	//printf("Exiting thread\n");
 	thread_flag = 0;
 	pthread_exit(NULL);
 }
