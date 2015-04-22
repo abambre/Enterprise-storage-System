@@ -58,7 +58,7 @@ int getFreeBlock()
 		}
 	}
 	
-	printf(" running out of memory \n");
+	D(printf("Running out of memory \n"));
 	exit(1);
 }
 
@@ -260,7 +260,7 @@ static int rmfs_getattr(const char *path, struct stat *stbuf)
 	}
 	buffNode=temp;
 	//printf("<<<<<<< %lld  , %lld>>>>>>>\n",malloc_counter,malloc_limit );
-	printf(" >>>>>>>>>>>>Used Blocks is %ld, Block count is %ld and CheckColdStorage \n", block_count-free_block_count, block_count);
+	D(printf("Used Blocks is %ld, Block count is %ld. \n", block_count-free_block_count, block_count));
 	return res;
 }
 
@@ -1155,7 +1155,7 @@ int main(int argc, char *argv[])
 	
 	if(argc < 3 || argc >4)
 	{
-		printf("Usage : ./ramdisk <mount_point> <size in MB> <Restore Filepath> \n");
+		printf("Usage : ./ramdisk <mount_point> <size in MB> \n");
 		exit(-1);
 	}
 	//Initialize the global lock
@@ -1167,11 +1167,11 @@ int main(int argc, char *argv[])
 	
 	
 	cli = intialize_drop_box();
-	printf("Cli: %s", cli);
+	//printf("Cli: %s", cli);
 	block_number = 0;
 	
 	malloc_limit=atoi(argv[2]);
-	printf("Malloc limit <%ld>\n",malloc_limit);
+	//printf("Malloc limit <%ld>\n",malloc_limit);
 	// Setting up block allocation for the in-memory file system
 	free_block_count=block_count=(malloc_limit*MB_CONVERT)/BLOCK_SIZE;
 	memory_blocks = malloc(block_count * sizeof(char*));
@@ -1179,7 +1179,7 @@ int main(int argc, char *argv[])
 		perror("malloc");
 		return errno;
 	}
-	printf("after block count malloc  \n");
+	//printf("after block count malloc  \n");
 	for(i=0;i<block_count; i++)
 	{
 		memory_blocks[i]=malloc(BLOCK_SIZE * sizeof(char));
@@ -1191,7 +1191,7 @@ int main(int argc, char *argv[])
 		memset(memory_blocks[i],'\0',BLOCK_SIZE);
 	}
 	
-	printf("before free block count malloc bloc count <%ld> \n",block_count);
+	//printf("before free block count malloc bloc count <%ld> \n",block_count);
 	// Initialize the free block structure
 	free_blk=malloc(block_count * sizeof(int));
 	if ( free_blk == NULL ) {
@@ -1212,22 +1212,22 @@ int main(int argc, char *argv[])
 	//argc=2;
 	//defining the root element
 	
-	printf("D1\n");
+	//printf("D1\n");
 	
 	int mlc_chk=ckmalloc(sizeof(*root),&root);
 	if(mlc_chk!=0)
 	return mlc_chk;
 	
-	printf("D2\n");
+	//printf("D2\n");
 	strncpy(root->name,"/",strlen("/"));
 	root->type=Ndir;
 	root->next=root->child=NULL;
 	root->data=NULL;
 	
-	printf("D3\n");
+	//printf("D3\n");
 	if(pstr == 1)
 	{
-		printf("D4\n");
+		//printf("D4\n");
 		fp = fopen (argv[3], "a+");
 		if (fp == NULL)
 			exit(EXIT_FAILURE);
@@ -1237,10 +1237,10 @@ int main(int argc, char *argv[])
 	}
 	//  eflag=makeSamplefile();
 	
-	printf("before the fuse main \n");
+	//printf("before the fuse main \n");
 	eflag=fuse_main(argc, argv, &rmfs_oper, NULL);
 	
-	printf("After fuse main\n");
+	//printf("After fuse main\n");
 	if(pstr == 1)
 	{
 		char prefix[1000]="/";
