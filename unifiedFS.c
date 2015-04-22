@@ -780,6 +780,8 @@ static int rmfs_unlink(const char *path)
 		sib->next=temp->next;
 	}
 	
+	temp->access_time = time(NULL);
+
 	if(temp->inmemory_node_flag == True)
 	  freemalloc(temp);
 	else
