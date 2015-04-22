@@ -262,7 +262,7 @@ void activate_hashtree(){
 
 	if(hashtree_file_exist == 0){
 		create_hashtree();
-		T(printf("Hashtree Fetched, Creating 	inmemory Hashtree.\n"));
+		T(printf("Hashtree Fetched, Creating inmemory Hashtree.\n"));
 	}
 	else{
 		T(printf("Hashtree does not exist on cold storage, Creating a new inmemory Hashtree.\n"));
@@ -355,9 +355,10 @@ void read_access_cold_blocks(Node cold_file){
 	if(thread_flag != 1){
 		activate_hashtree();
 		hashtree_activated = 1;
+		D(printf("(File: %s) Using new hashtree. \n",cold_file->name));
 	}
 	else{
-		D(printf("(File: %s) Another Thread Running. Using existing hashtree. \n",cold_file->name));	
+		D(printf("(File: %s) Using existing hashtree. \n",cold_file->name));	
 	}
 
 	D(printf("(File: %s) Retrieving from cold storage.\n",cold_file->name));
@@ -389,6 +390,7 @@ void read_access_cold_blocks(Node cold_file){
 	/**********Move this to calling function*********************/
 	cold_file->inmemory_node_flag = True;
 	if(hashtree_activated == 1){
+		D(printf("(File: %s) Hastree is activated. Now removing hastree file.\n",cold_file->name));
 		remove("./dropbox_hashtree.txt");
 	}
 }

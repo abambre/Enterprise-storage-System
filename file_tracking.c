@@ -124,18 +124,19 @@ List_item *sort_list_size(List_item *lroot) {
 void print_list(List_item *list) {
 	List_item *temp = NULL;
 	
-	D(printf("\nFormat:  <FileName>:<File access_time in s>:<File size>\n"));
-	T(printf("----------------------------------------------------------------------------\n"));
+	D(printf("\nPrint Format:  <FileName>:<File access_time in s>:<File size>\n"));
+	D(printf("----------------------------------------------------------------------------\n"));
 	if (list == NULL) {
 		printf("List head empty\n");
 		return;
 	}
 	temp = list;
+	D(printf(""));
 	while(temp != NULL) {
-		D(printf("%s:%ld:%d->",temp->inode->name, temp->inode->access_time, temp->inode->len));
+		printf("%s:%ld:%d->",temp->inode->name, temp->inode->access_time, temp->inode->len);
 		temp = temp->next;
 	}
-	T(printf("\n----------------------------------------------------------------------------\n"));
+	D(printf("\n----------------------------------------------------------------------------\n"));
 }
 
 /*Populate List of all files in memory*/
@@ -210,18 +211,18 @@ void *track_cold_files() {
 	Node node_to_transfer = NULL;
 	List_item *temp = NULL;
 	sleep(1);
-	T(printf("\n-----------------------------------------------------------------------------------\n"));
-	T(printf("Storage Utilization exceeded the Maximum %d percent threshold\n", MAX_STORAGE_THRESHOLD));
-	T(printf("\n Current Storage Utilization = %d Blocks\n Total Storage of System = %d Blocks\n",block_count-free_block_count, block_count));
+	D(printf("\n-----------------------------------------------------------------------------------\n"));
+	D(printf("Storage Utilization exceeded the Maximum %d percent threshold\n", MAX_STORAGE_THRESHOLD));
+	D(printf("\n Current Storage Utilization = %d Blocks\n Total Storage of System = %d Blocks\n",block_count-free_block_count, block_count));
 	//sleep(1);
 	num_files = populate_access_list();
 	
 	
 	acclist_head = sort_list(acclist_head);
 	D(printf("\n------------------------------------------------------------------------------------\n"));
-	D(printf("All Files in System sorted according to access time\n"));
+	T(printf("All Files in System sorted according to access time\n"));
 	print_list(acclist_head);
-	D(printf("\n------------------------------------------------------------------------------------\n"));
+	T(printf("\n------------------------------------------------------------------------------------\n"));
 
 	prepare_nodelist_to_transfer();        //Select FIles to transfer and sort them according to Size
 	D(printf("\n------------------------------------------------------------------------------------\n"));
@@ -360,15 +361,16 @@ void *get_cold_files() {
 		node_to_retrive = get_inode(&rtvlist_head);
 		read_access_cold_blocks(node_to_retrive);
 	}
-		
+	temp = NULL;	
 	//printf("Freeing memory\n");
 	while(rtvlist_head != NULL) {
 		temp = rtvlist_head;
-		acclist_head = rtvlist_head->next;
+		rtvlist_head = rtvlist_head->next;
 		free(temp);
+		temp = NULL;
 	}
 	temp = NULL;
-	T(printf("\n Completed Hot-to-Cold Data transfer\n"));
+	T(printf("\n Completed Cold-to-Hot Data transfer\n"));
 	T(printf("\n Current Storage Utilization = %d Blocks\n Total Storage of System = %d Blocks\n",block_count-free_block_count, block_count));
 	T(printf("\n-------------------------------------------------------------------------------------------\n"));
 
