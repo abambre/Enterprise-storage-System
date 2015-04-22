@@ -135,6 +135,36 @@ void freemalloc(Node n)
 	//malloc_counter-=totalsize;
 }
 
+
+//
+void freeColdBlock(Block blk)
+{
+	if(blk==NULL)
+		return;
+	freeColdBlock(blk->nxt_blk);
+	//free_blk[blk->blk_num]=-1;
+	//memset(memory_blocks[blk->blk_num],'\0',BLOCK_SIZE);
+	free(blk);
+	blk=NULL;
+	
+}
+
+// Freemalloc function for cold files
+void freemallocColdFiles(Node n)
+{
+	long totalsize=0;
+	if(n->data!=NULL)
+	{
+		totalsize+=n->len;
+		freeColdBlock(n->data);
+	}
+	totalsize+=sizeof(*root);
+	free(n);
+	n=NULL;
+	//malloc_counter-=totalsize;
+}
+
+
 //  Lookup function to serach for the particular node by traversing the path from root
 static int directory_lookup(const char *path,Node *t,int mode)
 {
@@ -750,7 +780,11 @@ static int rmfs_unlink(const char *path)
 		sib->next=temp->next;
 	}
 	
-	freemalloc(temp);
+	if(temp->inmemory_node_flag == True)
+	  freemalloc(temp);
+	else
+ 	  freemallocColdFiles(temp);
+	
 	temp=NULL;
 	
 	if((checkMinStorageThreshold(MIN_STORAGE_THRESHOLD)) && (thread_flag == 0))
