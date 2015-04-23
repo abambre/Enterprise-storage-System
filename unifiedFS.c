@@ -16,6 +16,7 @@ make unifiedFS
 // List for access and retrival of files.
 List_item *acclist_head = NULL;
 List_item *transfer_list = NULL;
+List_item *delayWrite_head = NULL;
 List_item *rtvlist_head = NULL;
 
 // Memory Counter variables
