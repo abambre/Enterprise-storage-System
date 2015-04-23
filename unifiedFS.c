@@ -304,7 +304,8 @@ off_t offset, struct fuse_file_info *fi)
 	while(dirNode!=NULL)
 	{
 		//printf("node dir %s\n",dirNode->name);
-		filler(buf, dirNode->name, NULL, 0);
+		if(dirNode->write_delayed==False)
+			filler(buf, dirNode->name, NULL, 0);
 		dirNode=dirNode->next;
 	}
 	
@@ -691,7 +692,7 @@ static int rmfs_create(const char *path, mode_t t,struct fuse_file_info *fi)
 	newDirNode->access_time = time(NULL);
 	/****Making Node Level Inmemory Flag True***********************************************/
 	newDirNode->inmemory_node_flag = True;
-	
+	newDirNode->write_delayed = False;
 	strncpy(newDirNode->name,a,sizeof(a));
 	
 	memset(spiltstr,'\0',100);
@@ -741,6 +742,13 @@ static int rmfs_create(const char *path, mode_t t,struct fuse_file_info *fi)
 	return 0;
 }
 
+static void delayFileDeletes(Node *temp)
+{
+	if (temp==NULL) return 0;
+	insert_back(*temp, &delayWrite_head);
+	(*temp)->write_delayed = True;
+}
+
 // Remove the node
 static int rmfs_unlink(const char *path)
 {
@@ -782,10 +790,16 @@ static int rmfs_unlink(const char *path)
 	
 	temp->access_time = time(NULL);
 
+	if(thread_flag == 1)
+	{
+		delayFileDeletes(&temp);
+		return 0;
+	}	
+
 	if(temp->inmemory_node_flag == True)
-	  freemalloc(temp);
+		freemalloc(temp);
 	else
- 	  freemallocColdFiles(temp);
+ 		freemallocColdFiles(temp);
 	
 	temp=NULL;
 	

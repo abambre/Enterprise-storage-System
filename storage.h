@@ -64,6 +64,7 @@ struct node_t {
 	int len;
 	time_t access_time;
 	Bool inmemory_node_flag;
+	Bool write_delayed;
 	pthread_mutex_t lock;
 };
 
@@ -115,6 +116,7 @@ void *get_cold_files();
 extern List_item *acclist_head;
 extern List_item *transfer_list;
 extern List_item *rtvlist_head;
+extern List_item *delayWrite_head;
 
 // Flags
 extern int thread_flag;

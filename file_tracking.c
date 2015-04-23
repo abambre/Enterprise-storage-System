@@ -203,6 +203,29 @@ void prepare_nodelist_to_transfer() {
 	transfer_list = sort_list_size(transfer_list);
 }
 
+void deletePendingWrites(List_item *list)
+{
+	List_item *temp = NULL;
+	
+	if (list == NULL) {
+		printf("List head for Deplayed writes is empty\n");
+		return;
+	}
+
+	temp = list;
+	while(temp != NULL) {
+
+		printf(" Deleting file ->> %s\n", temp->inode->name);
+		if(temp->inode->inmemory_node_flag == True)
+			freemalloc(temp->inode);
+		else
+ 			freemallocColdFiles(temp->inode);
+
+		temp = temp->next;
+	}
+
+}
+
 /*----------Main thread that initiates Hot-to-Cold Data Transfer-------*/
 
 void *track_cold_files() {
@@ -259,7 +282,9 @@ void *track_cold_files() {
 	D(printf("Current Storage Utilization = %d Blocks\n",block_count-free_block_count));
 	D(printf("Total Storage of System = %d Blocks\n",block_count));
 	D(printf("-----------------------------------------------------------------------------------------\n"));
-	thread_flag = 0;
+	
+	thread_flag = 0;	
+	deletePendingWrites(delayWrite_head);
 	pthread_exit(NULL);
 }
 
@@ -374,7 +399,10 @@ void *get_cold_files() {
 	D(printf("-------------------------------------------------------------------------------------------\n"));
 
 	//printf("Exiting thread\n");
+	
 	thread_flag = 0;
+	deletePendingWrites(delayWrite_head);
+
 	pthread_exit(NULL);
 }
 
