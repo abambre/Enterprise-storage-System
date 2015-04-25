@@ -203,26 +203,18 @@ void prepare_nodelist_to_transfer() {
 	transfer_list = sort_list_size(transfer_list);
 }
 
-void deletePendingWrites(List_item *list)
+void deletePendingWrites()
 {
-	List_item *temp = NULL;
-	
-	if (list == NULL) {
-		printf("List head for Deplayed writes is empty\n");
-		return;
-	}
+	Node temp = NULL;
 
-	temp = list;
-	while(temp != NULL) {
-
-		printf(" Deleting file ->> %s\n", temp->inode->name);
-		if(temp->inode->inmemory_node_flag == True)
-			freemalloc(temp->inode);
+	while(delayWrite_head != NULL) {
+		temp = get_inode(&delayWrite_head);
+		printf(" Deleting file ->> %s\n", temp->name);
+		if(temp->inmemory_node_flag == True)
+			freemalloc(temp);
 		else
- 			freemallocColdFiles(temp->inode);
-
-		temp = temp->next;
-	}
+ 			freemallocColdFiles(temp);
+ 	}
 
 }
 
@@ -258,13 +250,19 @@ void *track_cold_files() {
 		node_to_transfer = get_inode(&transfer_list);
 		write_access_cold_blocks(node_to_transfer);
 	}
-	/**********Move this to calling function*********************/
-	upload_dropbox_file("./dropbox_hashtree.txt", "dropbox_hashtree.txt", "/dropbox_hashtree.txt");
-	
+		
 	if((transfer_list == NULL) && (checkStorageThreshold(OPTIMAL_STORAGE_THRESHOLD))) {
 		D(printf("Storage Utilization is above Maximum threshold - But no files in the transfer to cold\n"));
+		while(checkStorageThreshold(OPTIMAL_STORAGE_THRESHOLD) && (acclist_head != NULL)) {
+			node_to_transfer = get_inode(&acclist_head);
+			write_access_cold_blocks(node_to_transfer);	
+		}
 	}
+
+	/**********Move this to calling function*********************/
+	upload_dropbox_file("./dropbox_hashtree.txt", "dropbox_hashtree.txt", "/dropbox_hashtree.txt");
 	//printf("Freeing memory\n");
+
 	while(acclist_head != NULL) {
 		temp = acclist_head;
 		acclist_head = acclist_head->next;
@@ -284,7 +282,7 @@ void *track_cold_files() {
 	D(printf("-----------------------------------------------------------------------------------------\n"));
 	
 	thread_flag = 0;	
-	deletePendingWrites(delayWrite_head);
+	deletePendingWrites();
 	pthread_exit(NULL);
 }
 
@@ -401,7 +399,7 @@ void *get_cold_files() {
 	//printf("Exiting thread\n");
 	
 	thread_flag = 0;
-	deletePendingWrites(delayWrite_head);
+	deletePendingWrites();
 
 	pthread_exit(NULL);
 }

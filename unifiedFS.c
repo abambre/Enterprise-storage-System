@@ -788,7 +788,11 @@ static int rmfs_unlink(const char *path)
 	{
 		sib->next=temp->next;
 	}
+
+	pthread_mutex_lock(&(temp->lock));
+	pthread_mutex_unlock(&(temp->lock));
 	
+		
 	temp->access_time = time(NULL);
 
 	if(thread_flag == 1)
