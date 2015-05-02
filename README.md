@@ -21,18 +21,19 @@ This Project uses FUSE for FS operations and Dropbox as cold storage
    *  Run "make all" in the folder where dropbox library is extracted.
 
 ### Execution Instructions  
+
 Instructions to run Unified File System Project (Our Project)
-1. Extract the downloaded project source package.
-2. cd to Enterprise-storage-System
-3. run make
-4. create a mount point folder - Ex: mkdir /tmp/fuse
-5. Run the Virtual File System : shell> ./unifiedFS <mount-point> <File system size in MB>
-      Ex: ./unifiedFS /tmp/fuse 512
-6. cd to the mount-point and perform general File operations.
-7. See the various scenarious when the file system reaches Maximum (70%) or minimum (30%) threshold.
-8. Track and see the blocks on Cold storage using the below credentials for Dropbox
-    username: esa.coldstorage@gmail.com
-    password: coldstorage
+*  Extract the downloaded project source package.
+*  cd to Enterprise-storage-System
+*  Run make
+*  Create a mount point folder - Ex: mkdir /tmp/fuse
+*  Run the Virtual File System : shell> ./unifiedFS <mount-point> <File system size in MB>   
+   *Ex:* ./unifiedFS /tmp/fuse 512
+*  cd to the mount-point and perform general File operations.
+*  See the various scenarious when the file system reaches Maximum (70%) or minimum (30%) threshold.
+*  Track and see the blocks on Cold storage using the below credentials for Dropbox    
+   username: esa.coldstorage@gmail.com    
+   password: coldstorage
     
       
 
