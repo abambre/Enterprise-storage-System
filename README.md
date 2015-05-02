@@ -19,7 +19,7 @@ This Project uses FUSE for FS operations and Dropbox as cold storage
          https://github.com/Dwii/Dropbox-C/blob/master/README.md
          *   CURL library
          *   OAuth library
-         *   Jansson library
+         *   Jansson library (Version > 2.5)
       * Clone the Dropbox-C library from here - https://github.com/Dwii/Dropbox-C
       * Run "make all" in the folder where dropbox library is extracted.
    3. Install glibc and open-ssl library packages on Linux
