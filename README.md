@@ -1,9 +1,9 @@
-# Enterprise-storage-System
+## Enterprise-storage-System
 
-This Project Contains three components - 
-1. Primary File System - using FUSE
-2. File tracking Layer
-3. Block Data Accessing Layer.
+This Project Contains three components 
+- Primary File System - using FUSE
+- File tracking Layer
+- Block Data Accessing Layer.
 
 Dependencies
 This Project uses FUSE for FS operations and Dropbox as cold storage
