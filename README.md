@@ -1,7 +1,7 @@
 ## Enterprise-storage-System
 
 ### Components
-This Project Contains three components 
+This Project Contains three components
    - Primary File System - using FUSE
    - File tracking Layer
    - Block Data Accessing Layer.
