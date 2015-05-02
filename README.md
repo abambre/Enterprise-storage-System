@@ -32,8 +32,8 @@ Instructions to run Unified File System Project (Our Project)
 *  cd to the mount-point and perform general File operations.
 *  See the various scenarious when the file system reaches Maximum (70%) or minimum (30%) threshold.
 *  Track and see the blocks on Cold storage using the below credentials for Dropbox    
-   username: esa.coldstorage@gmail.com    
-   password: coldstorage
+   **username:** esa.coldstorage@gmail.com    
+   **password:** coldstorage
     
       
 
