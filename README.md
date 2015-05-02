@@ -1,39 +1,42 @@
 ## Enterprise-storage-System
 
-### Components
 This Project Contains three components 
-- Primary File System - using FUSE
-- File tracking Layer
-- Block Data Accessing Layer.
+   - Primary File System - using FUSE
+   - File tracking Layer
+   - Block Data Accessing Layer.
 
-### Dependencies to install
-Dependencies
-This Project uses FUSE for FS operations and Dropbox as cold storage
-* FUSE - Install fuse as described in the below webpage
-   http://fuse.sourceforge.net/
-* Dropbox - Install dropbox dependicies and make dropbox
-   *  Install the dependencies described here - https://github.com/Dwii/Dropbox-C/blob/master/README.md
-      * cURL library
-      * OAuth library
-      * Jansson library
-   *  Install glibc and open-ssl library packages on Linux
-   *  Clone the Dropbox-C library from here - https://github.com/Dwii/Dropbox-C
-   *  Run "make all" in the folder where dropbox library is extracted.
+Dependencies :
 
-### Execution Instructions  
+   This Project uses FUSE for FS operations and Dropbox as cold storage
+   
+      1. FUSE - Install fuse as described in the below webpage
+           http://fuse.sourceforge.net/
+      2. Dropbox - Install dropbox dependicies and make dropbox
+          a) Install the dependencies described here :
+               https://github.com/Dwii/Dropbox-C/blob/master/README.md
+                 CURL library
+                 OAuth library
+                 Jansson library
+          b) Install glibc and open-ssl library packages on Linux
+          c) Clone the Dropbox-C library from here - https://github.com/Dwii/Dropbox-C
+          d) run "make all" in the folder where dropbox library is extracted.
+    
 
 Instructions to run Unified File System Project (Our Project)
-*  Extract the downloaded project source package.
-*  cd to Enterprise-storage-System
-*  Run make
-*  Create a mount point folder - Ex: mkdir /tmp/fuse
-*  Run the Virtual File System : shell> ./unifiedFS <mount-point> <File system size in MB>   
-   *Ex:* ./unifiedFS /tmp/fuse 512
-*  cd to the mount-point and perform general File operations.
-*  See the various scenarious when the file system reaches Maximum (70%) or minimum (30%) threshold.
-*  Track and see the blocks on Cold storage using the below credentials for Dropbox    
-   **username:** esa.coldstorage@gmail.com    
-   **password:** coldstorage
+
+   1. Extract the downloaded project source package.
+   2. Change directory to Enterprise-storage-System
+   3. Run make
+      ``` make unifiedFS```
+   4. Create a mount point folder - Ex: mkdir /tmp/fuse  
+   5. Run the Virtual File System : shell> ./unifiedFS <mount-point> <File system size in MB>
+      Ex: ./unifiedFS /tmp/fuse 512
+   6. cd to the mount-point and perform general File operations.
+   7. See the various scenarious when the file system reaches Maximum (70%) or minimum (30%) threshold.
+   8. Track and see the blocks on Cold storage using the below credentials for Dropbox
+
+       username: esa.coldstorage@gmail.com
+       password: coldstorage
     
       
 
