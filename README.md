@@ -10,17 +10,17 @@ This Project Contains three components
 
 This Project uses FUSE for FS operations and Dropbox as cold storage
    
-   1. FUSE - Install fuse as described in the below webpage: 
+   1. FUSE - Install fuse as described in the below webpage:     
       http://fuse.sourceforge.net/
    2. Dropbox - Install dropbox dependicies and make dropbox
-   * Install the dependencies described here:   
-      https://github.com/Dwii/Dropbox-C/blob/master/README.md
-      *   CURL library
-      *   OAuth library
-      *   Jansson library
-   * Clone the Dropbox-C library from here - https://github.com/Dwii/Dropbox-C
-   * Run "make all" in the folder where dropbox library is extracted.
-* Install glibc and open-ssl library packages on Linux
+      * Install the dependencies described here:   
+         https://github.com/Dwii/Dropbox-C/blob/master/README.md
+         *   CURL library
+         *   OAuth library
+         *   Jansson library
+      * Clone the Dropbox-C library from here - https://github.com/Dwii/Dropbox-C
+      * Run "make all" in the folder where dropbox library is extracted.
+   3. Install glibc and open-ssl library packages on Linux
 
 ### Execution Instructions
 Instructions to run Unified File System Project (Our Project)
@@ -30,8 +30,7 @@ Instructions to run Unified File System Project (Our Project)
    3. Run make
       ``` make unifiedFS```
    4. Create a mount point folder - Ex: mkdir /tmp/fuse  
-   5. Run the Virtual File System:   
-      ``` shell> ./unifiedFS <mount-point> <File system size in MB>```     
+   5. Run the Virtual File System:   ``` shell> ./unifiedFS <mount-point> <File system size in MB>```     
       ``` e.g. shell> ./unifiedFS /tmp/fuse 512``` 
    6. cd to the mount-point and perform general File operations.
    7. See the various scenarious when the file system reaches Maximum (70%) or minimum (30%) threshold.
