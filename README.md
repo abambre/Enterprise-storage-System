@@ -1,27 +1,28 @@
 ## Enterprise-storage-System
 
+### Components
 This Project Contains three components 
    - Primary File System - using FUSE
    - File tracking Layer
    - Block Data Accessing Layer.
 
-Dependencies :
+### Dependencies
 
-   This Project uses FUSE for FS operations and Dropbox as cold storage
+This Project uses FUSE for FS operations and Dropbox as cold storage
    
-      1. FUSE - Install fuse as described in the below webpage
-           http://fuse.sourceforge.net/
-      2. Dropbox - Install dropbox dependicies and make dropbox
-          a) Install the dependencies described here :
-               https://github.com/Dwii/Dropbox-C/blob/master/README.md
-                 CURL library
-                 OAuth library
-                 Jansson library
-          b) Install glibc and open-ssl library packages on Linux
-          c) Clone the Dropbox-C library from here - https://github.com/Dwii/Dropbox-C
-          d) run "make all" in the folder where dropbox library is extracted.
-    
+* FUSE - Install fuse as described in the below webpage:      
+   http://fuse.sourceforge.net/
+* Dropbox - Install dropbox dependicies and make dropbox
+   * Install the dependencies described here:   
+      https://github.com/Dwii/Dropbox-C/blob/master/README.md
+      *   CURL library
+      *   OAuth library
+      *   Jansson library
+   * Clone the Dropbox-C library from here - https://github.com/Dwii/Dropbox-C
+   * Run "make all" in the folder where dropbox library is extracted.
+* Install glibc and open-ssl library packages on Linux
 
+### Execution Instructions
 Instructions to run Unified File System Project (Our Project)
 
    1. Extract the downloaded project source package.
@@ -35,8 +36,8 @@ Instructions to run Unified File System Project (Our Project)
    7. See the various scenarious when the file system reaches Maximum (70%) or minimum (30%) threshold.
    8. Track and see the blocks on Cold storage using the below credentials for Dropbox
 
-       username: esa.coldstorage@gmail.com
-       password: coldstorage
+      **username:** esa.coldstorage@gmail.com
+      **password:** coldstorage
     
       
 
